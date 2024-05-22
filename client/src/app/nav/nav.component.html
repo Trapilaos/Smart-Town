@@ -1,0 +1,47 @@
+<nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark">
+  <div class="container">
+    <a class="navbar-brand" href="#">Smart-Town</a>
+
+    <div class="collapse navbar-collapse" id="navbarCollapse">
+      <!-- Conditional rendering of nav items based on user login status -->
+      <ul class="navbar-nav me-auto mb-2 mb-md-0" *ngIf="(accountService.currentUser$ | async)">
+        <li class="nav-item"><a class="nav-link" routerLink="/home">Home</a></li>
+        <li class="nav-item"><a class="nav-link" routerLink="/traffic">Traffic</a></li>
+        <li class="nav-item"><a class="nav-link" routerLink="/trash">Trash</a></li>
+        <li class="nav-item"><a class="nav-link" routerLink="/lighting">Lighting</a></li>
+        <li class="nav-item"><a class="nav-link" routerLink="/community">Community</a></li>
+        <li class="nav-item"><a class="nav-link" routerLink="/payments">Payments</a></li>
+      </ul>
+
+      <!-- Dropdown menu for logged in users -->
+      <div class="dropdown" *ngIf="(accountService.currentUser$ | async)" dropdown>
+        <a class="dropdown-toggle text-light text-decoration-none" dropdownToggle>
+          Welcome User
+        </a>
+        <div class="dropdown-menu" *dropdownMenu>
+          <a class="dropdown-item" routerLink="/profile">Edit Profile</a>
+          <a class="dropdown-item" (click)="logout()">Logout</a>
+        </div>
+      </div>
+
+      <!-- Login form for guests -->
+      <form *ngIf="!(accountService.currentUser$ | async)" #loginForm="ngForm" class="d-flex" (ngSubmit)="login()" autocomplete="off">
+        <input 
+          name="username"
+          [(ngModel)]="model.username"
+          class="form-control me-2" 
+          type="text" 
+          placeholder="Username" 
+          required>
+        <input 
+          name="password"
+          [(ngModel)]="model.password"
+          class="form-control me-2" 
+          type="password" 
+          placeholder="Password" 
+          required>
+        <button class="btn btn-outline-success" type="submit">Login</button>
+      </form>
+    </div>
+  </div>
+</nav>
