@@ -1,3 +1,8 @@
 .dropdown-toggle, .dropdown-item{
     cursor: pointer;
 }
+
+.navbar-brand-custom {
+    font-size: 1.5rem; /* Adjust the size as needed */
+  }
+  
