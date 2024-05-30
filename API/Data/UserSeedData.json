@@ -1,0 +1,122 @@
+[
+  {
+    "UserName": "lisa",
+    "FirstName": "Lisa",
+    "LastName": "Smith",
+    "Email": "lisa.smith@example.com",
+    "PhoneNumber": "123-456-7890",
+    "DateOfBirth": "1956-07-22",
+    "Created": "2023-05-27T00:00:00Z",
+    "Photos": [
+      {
+        "Url": "https://randomuser.me/api/portraits/women/54.jpg",
+        "IsMain": true
+      }
+    ]
+  },
+  {
+    "UserName": "john_doe",
+    "FirstName": "John",
+    "LastName": "Doe",
+    "Email": "john.doe@example.com",
+    "PhoneNumber": "098-765-4321",
+    "DateOfBirth": "1990-01-01",
+    "Created": "2023-05-27T00:00:00Z",
+    "Photos": [
+      {
+        "Url": "https://randomuser.me/api/portraits/men/1.jpg",
+        "IsMain": true
+      }
+    ]
+  },
+  {
+    "UserName": "jane_doe",
+    "FirstName": "Jane",
+    "LastName": "Doe",
+    "Email": "jane.doe@example.com",
+    "PhoneNumber": "456-789-0123",
+    "DateOfBirth": "1992-02-02",
+    "Created": "2023-05-27T00:00:00Z",
+    "Photos": [
+      {
+        "Url": "https://randomuser.me/api/portraits/women/1.jpg",
+        "IsMain": true
+      }
+    ]
+  },
+  {
+    "UserName": "michael_scott",
+    "FirstName": "Michael",
+    "LastName": "Scott",
+    "Email": "michael.scott@example.com",
+    "PhoneNumber": "321-654-0987",
+    "DateOfBirth": "1965-03-15",
+    "Created": "2023-05-27T00:00:00Z",
+    "Photos": [
+      {
+        "Url": "https://randomuser.me/api/portraits/men/3.jpg",
+        "IsMain": true
+      }
+    ]
+  },
+  {
+    "UserName": "pam_beesly",
+    "FirstName": "Pam",
+    "LastName": "Beesly",
+    "Email": "pam.beesly@example.com",
+    "PhoneNumber": "789-012-3456",
+    "DateOfBirth": "1979-06-18",
+    "Created": "2023-05-27T00:00:00Z",
+    "Photos": [
+      {
+        "Url": "https://randomuser.me/api/portraits/women/2.jpg",
+        "IsMain": true
+      }
+    ]
+  },
+  {
+    "UserName": "jim_halpert",
+    "FirstName": "Jim",
+    "LastName": "Halpert",
+    "Email": "jim.halpert@example.com",
+    "PhoneNumber": "654-321-7890",
+    "DateOfBirth": "1978-10-01",
+    "Created": "2023-05-27T00:00:00Z",
+    "Photos": [
+      {
+        "Url": "https://randomuser.me/api/portraits/men/4.jpg",
+        "IsMain": true
+      }
+    ]
+  },
+  {
+    "UserName": "dwight_schrute",
+    "FirstName": "Dwight",
+    "LastName": "Schrute",
+    "Email": "dwight.schrute@example.com",
+    "PhoneNumber": "987-654-3210",
+    "DateOfBirth": "1970-01-20",
+    "Created": "2023-05-27T00:00:00Z",
+    "Photos": [
+      {
+        "Url": "https://randomuser.me/api/portraits/men/5.jpg",
+        "IsMain": true
+      }
+    ]
+  },
+  {
+    "UserName": "angela_martin",
+    "FirstName": "Angela",
+    "LastName": "Martin",
+    "Email": "angela.martin@example.com",
+    "PhoneNumber": "123-987-6543",
+    "DateOfBirth": "1971-11-11",
+    "Created": "2023-05-27T00:00:00Z",
+    "Photos": [
+      {
+        "Url": "https://randomuser.me/api/portraits/women/3.jpg",
+        "IsMain": true
+      }
+    ]
+  }
+]
