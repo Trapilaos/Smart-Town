@@ -1,1 +1,18 @@
-<p>lighting works!</p>
+<!-- src/app/lighting/lighting.component.html -->
+<div class="container mt-5">
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">Smart Lighting Control</h5>
+        <p class="card-text">Current Time: <strong>{{ currentTime }}</strong></p>
+        <p class="card-text">Weather Condition: <strong>{{ weatherCondition }}</strong></p>
+        <p class="card-text">Temperature: <strong>{{ temperature }}</strong></p>
+        <p class="card-text">Humidity: <strong>{{ humidity }}</strong></p>
+        <hr>
+        <p class="card-text">Lights Status: <strong>{{ statusMessage }}</strong></p>
+        <div *ngIf="!lightsOn">
+          <p class="card-text">Next Light On Time: <strong>{{ nextLightOnTime }}</strong></p>
+        </div>
+      </div>
+    </div>
+  </div>
+  

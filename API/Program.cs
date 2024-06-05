@@ -2,15 +2,18 @@ using API;
 using API.Data;
 using API.Extensions;
 using API.Middleware;
+using API.Services;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-
 builder.Services.AddControllers();
 builder.Services.AddApplicationServices(builder.Configuration);
 builder.Services.AddIdentityServices(builder.Configuration);
+
+// Register HttpClient
+builder.Services.AddHttpClient<SmartLightingService>();
 
 var app = builder.Build();
 
@@ -32,7 +35,8 @@ try
     await context.Database.MigrateAsync();
     await Seed.SeedUsers(context);
 }
-catch(Exception ex){
+catch (Exception ex)
+{
     var logger = services.GetService<ILogger<Program>>();
     logger.LogError(ex, "An error occurred during migration");
 }
