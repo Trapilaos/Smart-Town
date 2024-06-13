@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using API.Entities;
 using API.Interfaces;
 using AutoMapper;
@@ -19,6 +18,7 @@ public class UsersController : BaseApiController
         _mapper = mapper;
     }
     
+    [Authorize(Roles = "Admin")]
     [HttpGet]
     public async Task<ActionResult<IEnumerable<AppUser>>> GetUsers()
     {
@@ -27,10 +27,10 @@ public class UsersController : BaseApiController
         return Ok(users);
     }
 
-    [HttpGet("{username}")]
+     [HttpGet("{username}", Name = "GetUser")]
     public async Task<ActionResult<MemberDTO>> GetUser(string username)
     {
-        return await _userRepository.GetMemberAsync(username);
+        return await _unitOfWork.UserRepository.GetMemberAsync(username);
     }
 
 

@@ -1,8 +1,8 @@
-using System.Security.Cryptography;
-using System.Text;
 using API.DTOs;
-using API.Interfaces;
 using API.Entities;
+using API.Interfaces;
+using AutoMapper;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,63 +10,86 @@ namespace API.Controllers
 {
     public class AccountController : BaseApiController
     {
-        private readonly DataContext _context;
+        private readonly IMapper _mapper;
+        private readonly UserManager<AppUser> _userManager;
         private readonly ITokenService _tokenService;
-        public AccountController(DataContext context, ITokenService tokenService)
+        private readonly ILogger<AccountController> _logger;
+
+        public AccountController(UserManager<AppUser> userManager, ITokenService tokenService, IMapper mapper, ILogger<AccountController> logger)
         {
+            _userManager = userManager;
             _tokenService = tokenService;
-            _context = context;
+            _mapper = mapper;
+            _logger = logger;
         }
 
         [HttpPost("register")] // POST : api/account/register
         public async Task<ActionResult<UserDTO>> Register(RegisterDTO registerDTO)
         {
-
             if (await UserExists(registerDTO.Username)) return BadRequest("Username is taken!");
+            var user = _mapper.Map<AppUser>(registerDTO);
 
-            using var hmac = new HMACSHA512();
+            user.UserName = registerDTO.Username.ToLower();
+       
+            var result = await _userManager.CreateAsync(user, registerDTO.Password);
+            if(!result.Succeeded) return BadRequest(result.Errors);
 
-            var user = new AppUser
-            {
-                UserName = registerDTO.Username.ToLower(),
-                PasswordHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(registerDTO.Password)),
-                PasswordSalt = hmac.Key
-            };
+            var roleResult = await _userManager.AddToRoleAsync(user, "Member");
 
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
-
+            if(!roleResult.Succeeded) return BadRequest(result.Errors);
             return new UserDTO{
                 Username = user.UserName,
-                Token = _tokenService.CreateToken(user)
+                Token =await _tokenService.CreateToken(user)
             };
         }
 
         [HttpPost("login")]
         public async Task<ActionResult<UserDTO>> Login(LoginDTO loginDTO)
         {
-            var user = await _context.Users.SingleOrDefaultAsync(x => x.UserName == loginDTO.Username);
+            _logger.LogInformation("Login attempt for username: {Username}", loginDTO.Username);
 
-            if (user == null) return Unauthorized("Invalid Username!");
+            var user = await _userManager.Users
+                .Include(p => p.Photos)
+                .SingleOrDefaultAsync(x => x.UserName == loginDTO.Username.ToLower());
 
-            using var hmac = new HMACSHA512(user.PasswordSalt);
-
-            var computedHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(loginDTO.Password));
-
-            for(int i =0; i < computedHash.Length; i++)
+            if (user == null)
             {
-                if(computedHash[i] != user.PasswordHash[i]) return Unauthorized("Invalid Password!");
+                _logger.LogWarning("Invalid username: {Username}", loginDTO.Username);
+                return Unauthorized("Invalid Username!");
             }
+
+            var result = await _userManager.CheckPasswordAsync(user, loginDTO.Password);
+
+            if (!result)
+            {
+                _logger.LogWarning("Invalid password for username: {Username}", loginDTO.Username);
+                return Unauthorized("Invalid Password");
+            }
+
+            if (user.Photos == null)
+            {
+                _logger.LogWarning("Photos collection is null for user: {Username}", loginDTO.Username);
+                user.Photos = new List<Photo>(); // Initialize to avoid null reference
+            }
+
+            var mainPhoto = user.Photos.FirstOrDefault(x => x.IsMain);
+            if (mainPhoto == null)
+            {
+                _logger.LogWarning("No main photo found for user: {Username}", loginDTO.Username);
+            }
+
+            _logger.LogInformation("Login successful for username: {Username}", loginDTO.Username);
 
             return new UserDTO{
                 Username = user.UserName,
-                Token = _tokenService.CreateToken(user)
+                Token =await _tokenService.CreateToken(user),
+                PhotoUrl = mainPhoto?.Url
             };
-
         }
+
         private async Task<bool> UserExists(string username)
         {
-            return await _context.Users.AnyAsync(x => x.UserName == username.ToLower());
+            return await _userManager.Users.AnyAsync(x => x.UserName == username.ToLower());
         }
     }
 }
