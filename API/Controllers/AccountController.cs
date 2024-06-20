@@ -30,7 +30,7 @@ namespace API.Controllers
             var user = _mapper.Map<AppUser>(registerDTO);
 
             user.UserName = registerDTO.Username.ToLower();
-       
+
             var result = await _userManager.CreateAsync(user, registerDTO.Password);
             if(!result.Succeeded) return BadRequest(result.Errors);
 
@@ -48,9 +48,19 @@ namespace API.Controllers
         {
             _logger.LogInformation("Login attempt for username: {Username}", loginDTO.Username);
 
-            var user = await _userManager.Users
-                .Include(p => p.Photos)
-                .SingleOrDefaultAsync(x => x.UserName == loginDTO.Username.ToLower());
+            AppUser user;
+
+            if (loginDTO.Username.Equals("Admin", System.StringComparison.OrdinalIgnoreCase))
+            {
+                var adminUsers = await _userManager.GetUsersInRoleAsync("Admin");
+                user = adminUsers.FirstOrDefault();
+            }
+            else
+            {
+                user = await _userManager.Users
+                    .Include(p => p.Photos)
+                    .SingleOrDefaultAsync(x => x.UserName == loginDTO.Username.ToLower());
+            }
 
             if (user == null)
             {

@@ -21,6 +21,9 @@ public class Program
         // Register HttpClient
         builder.Services.AddHttpClient<SmartLightingService>();
 
+        // Register PaymentService
+        builder.Services.AddScoped<IPaymentService, PaymentService>();
+
         var app = builder.Build();
 
         // Configure the HTTP request pipeline.
@@ -42,7 +45,7 @@ public class Program
             var roleManager = services.GetRequiredService<RoleManager<AppRole>>();
             var logger = services.GetRequiredService<ILogger<Program>>();
             await context.Database.MigrateAsync();
-            await Seed.SeedUsers(userManager, roleManager, logger);
+            await Seed.SeedUsers(userManager, roleManager, context); // Pass context to SeedUsers method
         }
         catch (Exception ex)
         {
