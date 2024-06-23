@@ -1,1 +1,58 @@
-<p>traffic works!</p>
+<div class="container mt-4">
+  <h2 class="text-center mb-4">Traffic Management</h2>
+
+  <ng-container *ngIf="loading; else content">
+    <div class="d-flex justify-content-center align-items-center vh-100">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+    </div>
+  </ng-container>
+
+  <ng-template #content>
+    <div *ngIf="errorMessage" class="alert alert-danger mb-4">{{ errorMessage }}</div>
+
+    <div class="row">
+      <div class="col-md-6">
+        <h4 class="mb-3">Reserve Parking Spaces</h4>
+        <div class="card reserve-card mb-3" *ngFor="let space of parkingSpaces">
+          <div class="card-body">
+            <h5 class="card-title">{{ space.name }}</h5>
+            <p class="card-text">{{ space.currentVehicles }}/{{ space.maxVehicles }}</p>
+            <button class="btn btn-primary btn-block" (click)="selectParkingSpace(space)" [disabled]="space.currentVehicles >= space.maxVehicles">
+              <i class="fas fa-parking"></i> Reserve
+            </button>
+            <div class="invalid-feedback" *ngIf="selectedParkingSpaceId === space.id && reservationMessage">
+              {{ reservationMessage }}
+            </div>
+            <div class="mt-2" *ngIf="selectedParkingSpaceId === space.id">
+              <p><strong>Reservation Time:</strong> {{ reservationTime | date:'shortTime' }}</p>
+              <p><strong>Duration:</strong> 
+                <select class="form-select" [(ngModel)]="reservationDuration">
+                  <option [ngValue]="null">Select Duration</option>
+                  <option [ngValue]="30">30 minutes</option>
+                  <option [ngValue]="60">1 hour</option>
+                  <option [ngValue]="120">2 hours</option>
+                  <option [ngValue]="240">4 hours</option>
+                  <option [ngValue]="1440">1 day</option>
+                </select>
+              </p>
+              <button class="btn btn-success mt-2" (click)="confirmReservation()">Confirm Reservation</button>
+              <button class="btn btn-danger mt-2" (click)="cancelReservation()">Cancel</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <h4 class="mb-3">Traffic Data</h4>
+        <div class="traffic-map">
+          <div *ngFor="let data of trafficData" [ngClass]="getTrafficClass(data.trafficFlow)" class="traffic-location"
+            data-toggle="tooltip" data-placement="top" title="{{ data.location }}">
+            <i class="fas fa-road"></i> {{ data.location }} - {{ data.trafficFlow }}%
+          </div>
+        </div>
+      </div>
+    </div>
+  </ng-template>
+</div>

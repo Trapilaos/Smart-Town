@@ -1,0 +1,48 @@
+.reserve-card {
+  cursor: pointer;
+  transition: transform .2s;
+}
+
+.reserve-card:hover {
+  transform: scale(1.05);
+}
+
+.traffic-map {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+
+.traffic-location {
+  background-color: #fff;
+  border-radius: 50%;
+  width: 100px;
+  height: 100px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.traffic-high {
+  background-color: #ff5733;
+  color: #fff;
+}
+
+.traffic-medium {
+  background-color: #ffc107;
+  color: #fff;
+}
+
+.traffic-low {
+  background-color: #4caf50;
+  color: #fff;
+}
+
+.reservation-time {
+  font-weight: bold;
+}
+
+.reservation-duration {
+  font-weight: bold;
+}

@@ -1,18 +1,19 @@
-using System.Text.Json;
 using API.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using System.IO;
+using System.Text.Json;
 
 namespace API.Data
 {
     public class Seed
     {
-        public static async Task SeedUsers(UserManager<AppUser> userManager, 
-            RoleManager<AppRole> roleManager, DataContext context)
+        public static async Task SeedUsers(UserManager<AppUser> userManager, RoleManager<AppRole> roleManager, DataContext context)
         {
             if (await userManager.Users.AnyAsync()) return;
 
-            var userData = await System.IO.File.ReadAllTextAsync("Data/UserSeedData.json");
+            var userData = await File.ReadAllTextAsync("Data/UserSeedData.json");
             var users = JsonSerializer.Deserialize<List<AppUser>>(userData);
             if (users == null) return;
 
@@ -27,7 +28,7 @@ namespace API.Data
             {
                 await roleManager.CreateAsync(role);
             }
-            
+
             foreach (var user in users)
             {
                 user.UserName = user.UserName.ToLower();
@@ -41,27 +42,35 @@ namespace API.Data
             };
 
             await userManager.CreateAsync(admin, "Pa$$w0rd");
-            await userManager.AddToRolesAsync(admin, new[] {"Admin", "Moderator"});
+            await userManager.AddToRolesAsync(admin, new[] { "Admin", "Moderator" });
 
-            await SeedInvoices(context);
+            await SeedParkingSpaces(context);
+            await SeedTrafficData(context);
         }
 
-        private static async Task SeedInvoices(DataContext context)
+        public static async Task SeedParkingSpaces(DataContext context)
         {
-            if (await context.Invoices.AnyAsync()) return;
-
-            var invoices = new List<Invoice>
+            if (!await context.ParkingSpaces.AnyAsync())
             {
-                new Invoice { InvoiceNumber = "INV-001", Amount = 100.00M, UserId = "1", IsPaid = false },
-                new Invoice { InvoiceNumber = "INV-002", Amount = 150.50M, UserId = "2", IsPaid = false },
-                new Invoice { InvoiceNumber = "INV-003", Amount = 200.75M, UserId = "3", IsPaid = false },
-                new Invoice { InvoiceNumber = "INV-004", Amount = 120.00M, UserId = "4", IsPaid = false },
-                new Invoice { InvoiceNumber = "INV-005", Amount = 300.20M, UserId = "5", IsPaid = false },
-                new Invoice { InvoiceNumber = "INV-006", Amount = 80.00M, UserId = "6", IsPaid = false }
-            };
+                var parkingData = await File.ReadAllTextAsync("Data/parking-spaces.json");
+                var parkingSpaces = JsonSerializer.Deserialize<List<ParkingSpace>>(parkingData);
 
-            await context.Invoices.AddRangeAsync(invoices);
-            await context.SaveChangesAsync();
+                if (parkingSpaces != null)
+                {
+                    await context.ParkingSpaces.AddRangeAsync(parkingSpaces);
+                    await context.SaveChangesAsync();
+                }
+            }
+        }
+
+        public static async Task SeedTrafficData(DataContext context)
+        {
+            if (!await context.TrafficData.AnyAsync())
+            {
+                var trafficData = TrafficDataGenerator.GenerateTrafficData();
+                await context.TrafficData.AddRangeAsync(trafficData);
+                await context.SaveChangesAsync();
+            }
         }
     }
 }

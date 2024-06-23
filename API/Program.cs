@@ -2,6 +2,7 @@ using API;
 using API.Data;
 using API.Entities;
 using API.Extensions;
+using API.Interfaces;
 using API.Middleware;
 using API.Services;
 using Microsoft.AspNetCore.Identity;
@@ -21,8 +22,9 @@ public class Program
         // Register HttpClient
         builder.Services.AddHttpClient<SmartLightingService>();
 
-        // Register PaymentService
-        builder.Services.AddScoped<IPaymentService, PaymentService>();
+        // Register TrafficService and ParkingService
+        builder.Services.AddScoped<ITrafficService, TrafficService>();
+        builder.Services.AddScoped<IParkingService, ParkingService>();
 
         var app = builder.Build();
 
@@ -45,7 +47,10 @@ public class Program
             var roleManager = services.GetRequiredService<RoleManager<AppRole>>();
             var logger = services.GetRequiredService<ILogger<Program>>();
             await context.Database.MigrateAsync();
-            await Seed.SeedUsers(userManager, roleManager, context); // Pass context to SeedUsers method
+            await Seed.SeedUsers(userManager, roleManager, context);
+            await Seed.SeedParkingSpaces(context);
+            await Seed.SeedTrafficData(context);
+
         }
         catch (Exception ex)
         {
