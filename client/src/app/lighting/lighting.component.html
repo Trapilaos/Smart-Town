@@ -1,21 +1,20 @@
-<!-- src/app/lighting/lighting.component.html -->
 <div class="container mt-5">
   <div class="row justify-content-center">
     <div class="col-md-10">
       <div class="card shadow-lg">
         <div class="card-header bg-success text-white text-center">
-          <h2><i class="bi bi-lightbulb-fill"></i> Lighting Control Panel</h2>
+          <h2><i class="fas fa-lightbulb"></i> Lighting Control Panel</h2>
         </div>
         <div class="card-body text-center">
           <div *ngIf="statusMessage === 'Checking...'" class="spinner-border text-success" role="status">
             <span class="sr-only">Loading...</span>
           </div>
           <p *ngIf="statusMessage !== 'Checking...'">
-            <i class="bi" [ngClass]="{'bi-brightness-low': lightingStatus === 'Lights Off', 'bi-brightness-high': lightingStatus === 'Lights On'}"></i>
+            <i class="fas" [ngClass]="{'fa-lightbulb-slash': lightingStatus === 'Lights Off', 'fa-lightbulb': lightingStatus === 'Lights On'}"></i>
             <strong>Lighting Status:</strong> {{ statusMessage }}
           </p>
           <p *ngIf="brightnessLevel && lightingStatus === 'Lights On'">
-            <i class="bi bi-sliders"></i> <strong>Brightness Level:</strong> {{ brightnessLevel }}
+            <i class="fas fa-sliders-h"></i> <strong>Brightness Level:</strong> {{ brightnessLevel }}
           </p>
         </div>
       </div>

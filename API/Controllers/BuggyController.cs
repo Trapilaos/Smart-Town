@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using API.Entities;
+using API.Data;
 
 namespace API.Controllers
 {

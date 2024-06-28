@@ -1,6 +1,5 @@
 using API.Entities;
-using System;
-using System.Collections.Generic;
+
 
 namespace API.Data
 {
@@ -10,7 +9,7 @@ namespace API.Data
         {
             var trafficDataList = new List<TrafficData>();
             var random = new Random();
-            var locations = new[] { "Main Street", "Secondary Street", "Third Street", "Fourth Circle" };
+            var locations = new[] { "3is Septemvriou", "Alexandras", "Stadiou", "Vouliagmenis" };
             var currentTime = DateTime.Now;
             int id = 1; // Initialize id to 1
 
@@ -20,16 +19,27 @@ namespace API.Data
             {
                 for (int i = 0; i < 24; i++) // Generate hourly data for all streets
                 {
+                    int trafficFlow;
+                    if (peakHours.Contains(i))
+                    {
+                        // Generate higher traffic flow during peak hours
+                        trafficFlow = random.Next(60, 101);
+                    }
+                    else
+                    {
+                        // Generate lower traffic flow during non-peak hours
+                        trafficFlow = random.Next(0, 60);
+                    }
+
                     trafficDataList.Add(new TrafficData
                     {
                         Id = id++, // Assign unique id to each TrafficData entity
                         Location = location,
-                        TrafficFlow = random.Next(0, 101), // Traffic flow percentage between 0 and 100
+                        TrafficFlow = trafficFlow, // Traffic flow percentage between 0 and 100
                         Timestamp = currentTime.AddHours(i)
                     });
                 }
             }
-
             return trafficDataList;
         }
     }

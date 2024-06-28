@@ -1,6 +1,7 @@
 using API.DTOs;
 using Microsoft.EntityFrameworkCore;
 using API.Entities;
+using API.Data;
 
 namespace API.Services
 {

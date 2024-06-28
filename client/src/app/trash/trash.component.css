@@ -1,0 +1,92 @@
+.waste-bin-card {
+  cursor: pointer;
+  transition: transform .2s;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.waste-bin-card:hover {
+  transform: scale(1.05);
+}
+
+.glass-container {
+  width: 50px;
+  height: 150px;
+  border: 1px solid #ccc;
+  position: relative;
+  margin-bottom: 10px;
+}
+
+.fill {
+  background-color: #4caf50;
+  width: 100%;
+  position: absolute;
+  bottom: 0;
+  transition: height .2s;
+}
+
+.path-map {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.path-location {
+  background-color: #fff;
+  border: 1px solid #ccc;
+  padding: 10px 20px;
+  margin-right: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+.path-location:after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: -5px;
+  width: 0;
+  height: 0;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 5px solid #ccc;
+}
+
+.path-location:before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: -4px;
+  width: 0;
+  height: 0;
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  border-left: 6px solid #fff;
+}
+
+.path-start:before,
+.path-end:after {
+  display: none;
+}
+
+.path-start {
+  border-top-left-radius: 5px;
+  border-bottom-left-radius: 5px;
+}
+
+.path-end {
+  border-top-right-radius: 5px;
+  border-bottom-right-radius: 5px;
+}
+
+.path-location span {
+  margin-right: 5px;
+}
+
+.path-location i {
+  font-size: 14px;
+  margin-left: 5px;
+}
+

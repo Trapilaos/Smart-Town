@@ -1,4 +1,3 @@
-using API;
 using API.Data;
 using API.Entities;
 using API.Extensions;
@@ -25,6 +24,11 @@ public class Program
         // Register TrafficService and ParkingService
         builder.Services.AddScoped<ITrafficService, TrafficService>();
         builder.Services.AddScoped<IParkingService, ParkingService>();
+        builder.Services.AddScoped<IWasteManagementService, WasteManagementService>();
+
+
+        // Register TrafficDataBackgroundService
+        builder.Services.AddHostedService<TrafficDataBackgroundService>();
 
         var app = builder.Build();
 
@@ -47,10 +51,7 @@ public class Program
             var roleManager = services.GetRequiredService<RoleManager<AppRole>>();
             var logger = services.GetRequiredService<ILogger<Program>>();
             await context.Database.MigrateAsync();
-            await Seed.SeedUsers(userManager, roleManager, context);
-            await Seed.SeedParkingSpaces(context);
-            await Seed.SeedTrafficData(context);
-
+            await Seed.SeedData(userManager, roleManager, context);
         }
         catch (Exception ex)
         {

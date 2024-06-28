@@ -3,7 +3,7 @@
     <div class="col-md-8">
       <div class="card shadow-lg">
         <div class="card-header bg-success text-white text-center">
-          <h2><i class="bi bi-credit-card"></i> Payment Processing</h2>
+          <h2><i class="fas fa-credit-card"></i> Payment Processing</h2>
         </div>
         <div class="card-body">
           <form (ngSubmit)="processPayment()">
@@ -11,8 +11,10 @@
               <label for="invoiceNumber">Invoice Number</label>
               <input type="text" id="invoiceNumber" class="form-control" [(ngModel)]="payment.invoiceNumber" name="invoiceNumber" required>
             </div>
-            <button type="button" class="btn btn-primary mt-3" (click)="checkInvoice()" [disabled]="loading">Check Invoice</button>
-            
+            <button type="button" class="btn btn-primary mt-3" (click)="checkInvoice()" [disabled]="loading">
+              <i class="fas fa-search"></i> Check Invoice
+            </button>
+
             <div *ngIf="invoiceChecked" class="mt-3">
               <div class="form-group">
                 <label for="amount">Amount</label>
@@ -26,7 +28,9 @@
                 <label for="description">Description</label>
                 <input type="text" id="description" class="form-control" [(ngModel)]="payment.description" name="description" readonly>
               </div>
-              <button type="submit" class="btn btn-success mt-3" [disabled]="!invoiceChecked || loading">Pay</button>
+              <button type="submit" class="btn btn-success mt-3" [disabled]="!invoiceChecked || loading">
+                <i class="fas fa-check"></i> Pay
+              </button>
             </div>
           </form>
           <div *ngIf="loading" class="text-center mt-3">
@@ -35,13 +39,13 @@
             </div>
           </div>
           <div *ngIf="paymentStatus" class="alert alert-info mt-3">
-            {{ paymentStatus }}
+            <i class="fas fa-check-circle"></i> {{ paymentStatus }}
           </div>
           <div *ngIf="errorMessage" class="alert alert-danger alert-dismissible mt-3">
             <button type="button" class="close" aria-label="Close" (click)="closeAlert()">
               <span aria-hidden="true">&times;</span>
             </button>
-            {{ errorMessage }}
+            <i class="fas fa-exclamation-triangle"></i> {{ errorMessage }}
           </div>
         </div>
       </div>

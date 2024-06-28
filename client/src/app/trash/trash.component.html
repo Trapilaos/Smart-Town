@@ -1,1 +1,49 @@
-<p>trash works!</p>
+<div class="container mt-4">
+  <h2 class="text-center mb-4">Waste Management</h2>
+
+  <ng-container *ngIf="loading; else content">
+    <div class="d-flex justify-content-center align-items-center vh-100">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+    </div>
+  </ng-container>
+
+  <ng-template #content>
+    <div *ngIf="errorMessage" class="alert alert-danger mb-4">{{ errorMessage }}</div>
+
+    <div class="row">
+      <div class="col-md-6">
+        <h4 class="mb-3">Waste Bins Status</h4>
+        <div class="card waste-bin-card mb-3" *ngFor="let bin of wasteBins">
+          <div class="card-body">
+            <h5 class="card-title d-flex align-items-center">
+              <i class="fas fa-trash" [style.color]="bin.currentFillLevel >= bin.capacity * 0.8 ? 'red' : bin.currentFillLevel >= bin.capacity * 0.5 ? 'orange' : 'green'"></i>
+              <span class="ml-2">{{ bin.location }}</span>
+            </h5>
+            <div class="glass-container">
+              <div class="fill" [style.height.%]="(bin.currentFillLevel / bin.capacity) * 100"></div>
+            </div>
+            <p class="card-text">{{ bin.currentFillLevel }} liters / {{ bin.capacity }} liters</p>
+            <p class="card-text">Last Emptied: {{ bin.lastEmptied | date:'short' }}</p>
+            <button class="btn btn-primary btn-block" (click)="emptyBin(bin)">
+              <i class="fas fa-trash-restore"></i> Empty Bin
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <h4 class="mb-3">Optimal Collection Path</h4>
+        <div class="path-map">
+          <ng-container *ngFor="let location of optimalPath; let i = index">
+            <div class="path-location" [ngClass]="{'path-start': i === 0, 'path-end': i === optimalPath.length - 1}">
+              <span>{{ location }}</span>
+              <i class="fas fa-arrow-right" *ngIf="i < optimalPath.length - 1"></i>
+            </div>
+          </ng-container>
+        </div>
+      </div>      
+    </div>
+  </ng-template>
+</div>
