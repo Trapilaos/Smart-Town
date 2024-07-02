@@ -28,6 +28,7 @@ export class TrafficAndParkingService {
   }
 
   reserveParkingSpace(reservation: Reservation): Observable<Reservation> {
+    console.log('Reservation:', reservation);
     return this.http.post<Reservation>(`${this.parkingUrl}/reserve`, reservation).pipe(
       catchError(this.handleError)
     );

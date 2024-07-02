@@ -29,6 +29,5 @@ export class PaymentService {
     console.error('Backend returned code', error.status, 'body was:', error.error);
     return throwError(() => error.error); // Rethrow the error as an observable
   }
-  
-  
+ 
 }

@@ -1,6 +1,6 @@
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { environment } from 'src/environments/environment';
+import { environment } from 'src/environments/environment.development';
 import { Member } from '../_models/member';
 import { BehaviorSubject, tap } from 'rxjs';
 
@@ -11,7 +11,6 @@ export class MembersService {
   baseUrl = environment.apiUrl;
   private currentUserSource = new BehaviorSubject<Member | null>(null);
   currentUser$ = this.currentUserSource.asObservable();
-
 
   constructor(private http: HttpClient) { }
 
@@ -28,18 +27,18 @@ export class MembersService {
     console.log('setCurrentUser called');
     this.currentUserSource.next(user);
   }
-  
+
   getMemberByUsername(username: string) {
-    console.log('getMemberByUsername called with username:', username);
+    const token = localStorage.getItem('token');
     const httpOptions = {
       headers: new HttpHeaders({
-        Authorization: 'Bearer ' + localStorage.getItem('token')
+        Authorization: `Bearer ${token}`
       })
     };
-  
-    return this.http.get<Member>(this.baseUrl + 'users/username/' + username, httpOptions).pipe(
+
+    return this.http.get<Member>(this.baseUrl + 'users/' + username, httpOptions).pipe(
       tap(user => {
-        console.log('User:', user); // Add this line
+        this.setCurrentUser(user);
         return user;
       })
     );

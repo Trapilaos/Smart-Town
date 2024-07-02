@@ -63,12 +63,13 @@ export class TrafficComponent implements OnInit {
   loadCurrentUser() {
     const token = localStorage.getItem('token');
     const username = localStorage.getItem('username');
-    console.log('Token:', token);
   
     if (token && username) {
       this.membersService.getMemberByUsername(username).subscribe({
         next: (user: Member) => {
+          console.log('User data:', user); // Add this line to check if user data is being received correctly
           this.membersService.setCurrentUser(user);
+          this.currentUser = user; // Set the currentUser property in the component
         },
         error: (error: any) => {
           this.errorMessage = 'Failed to load user data';
@@ -84,6 +85,16 @@ export class TrafficComponent implements OnInit {
   }
 
   confirmReservation() {
+    
+    console.log('Selected parking space ID:', this.selectedParkingSpaceId);
+    console.log('Reservation duration:', this.reservationDuration);
+
+    if (!this.currentUser) {
+      this.loadCurrentUser();
+      console.log('Current user:', this.currentUser);
+      return;
+    }
+  
     if (this.currentUser && this.selectedParkingSpaceId && this.reservationDuration) {
       const reservation: Reservation = {
         userId: this.currentUser.id.toString(),
@@ -112,7 +123,6 @@ export class TrafficComponent implements OnInit {
     }
   }
   
-
   cancelReservation() {
     this.selectedParkingSpaceId = null;
     this.reservationMessage = '';

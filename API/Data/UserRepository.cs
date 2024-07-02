@@ -55,5 +55,11 @@ namespace API.Data
         {
             _context.Entry(user).State = EntityState.Modified;
         }
+
+        public async Task<MemberDTO> GetMemberByIdAsync(int id)
+        {
+            var user = await _context.Users.FindAsync(id);
+            return _mapper.Map<MemberDTO>(user);
+        }
     }
 }

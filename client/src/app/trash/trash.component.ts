@@ -38,7 +38,6 @@ export class TrashComponent implements OnInit {
     this.loading = true;
     this.wasteManagementService.getOptimalPath().subscribe({
       next: (path: string[]) => {
-        console.log('Optimal Path:', path); // Log the optimal path
         this.optimalPath = path;
         this.loading = false;
       },

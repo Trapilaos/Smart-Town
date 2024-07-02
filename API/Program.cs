@@ -24,12 +24,22 @@ public class Program
         // Register TrafficService and ParkingService
         builder.Services.AddScoped<ITrafficService, TrafficService>();
         builder.Services.AddScoped<IParkingService, ParkingService>();
+        builder.Services.AddScoped<IPaymentService, PaymentService>();
         builder.Services.AddScoped<IWasteManagementService, WasteManagementService>();
 
+        // Register EventService and CommentService
+        builder.Services.AddScoped<IEventService, EventService>();
+        builder.Services.AddScoped<ICommentService, CommentService>();
 
         // Register TrafficDataBackgroundService
         builder.Services.AddHostedService<TrafficDataBackgroundService>();
 
+        builder.Services.AddAuthorization(options =>
+        {
+            options.AddPolicy("RequireAdminRole", policy => policy.RequireRole("Admin"));
+            options.AddPolicy("RequireMemberRole", policy => policy.RequireRole("Member"));
+        });
+        
         var app = builder.Build();
 
         // Configure the HTTP request pipeline.

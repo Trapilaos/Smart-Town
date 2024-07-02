@@ -9,10 +9,6 @@ import { SharedModule } from './_modules/shared.module';
 import { NavComponent } from './nav/nav.component';
 import { HomeComponent } from './home/home.component';
 import { RegisterComponent } from './register/register.component';
-import { MemberListComponent } from './members/member-list/member-list.component';
-import { MemberDetailComponent } from './members/member-detail/member-detail.component';
-import { ListsComponent } from './lists/lists.component';
-import { MessagesComponent } from './messages/messages.component';
 import { TrafficComponent } from './traffic/traffic.component';
 import { LightingComponent } from './lighting/lighting.component';
 import { PayComponent } from './pay/pay.component';
@@ -20,11 +16,11 @@ import { TrashComponent } from './trash/trash.component';
 import { TestErrorComponent } from './errors/test-error/test-error.component';
 import { NotFoundComponent } from './errors/not-found/not-found.component';
 import { ServerErrorComponent } from './errors/server-error/server-error.component';
-import { MemberCardComponent } from './members/member-card/member-card.component';
+import { MemberComponent } from './member/member.component'; // Import MemberComponent
 import { ErrorInterceptor } from './_interceptors/error.interceptor';
 import { JwtInterceptor } from './_interceptors/jwt.interceptor';
-
-
+import { AdminDashboardComponent } from './admin/admin-dashboard/admin-dashboard.component';
+import { EventCreateComponent } from './admin/event-create/event-create.component';
 
 @NgModule({
   declarations: [
@@ -32,10 +28,6 @@ import { JwtInterceptor } from './_interceptors/jwt.interceptor';
     NavComponent,
     HomeComponent,
     RegisterComponent,
-    MemberListComponent,
-    MemberDetailComponent,
-    ListsComponent,
-    MessagesComponent,
     TrafficComponent,
     LightingComponent,
     PayComponent,
@@ -43,7 +35,9 @@ import { JwtInterceptor } from './_interceptors/jwt.interceptor';
     TestErrorComponent,
     NotFoundComponent,
     ServerErrorComponent,
-    MemberCardComponent
+    MemberComponent,
+    AdminDashboardComponent,
+    EventCreateComponent 
   ],
   imports: [
     BrowserModule,

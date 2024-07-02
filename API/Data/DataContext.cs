@@ -18,6 +18,8 @@ namespace API.Data
         public DbSet<Reservation> Reservations { get; set; }
         public DbSet<TrafficData> TrafficData { get; set; }
         public DbSet<WasteBin> WasteBins { get; set; }
+        public DbSet<Event> Events { get; set; }
+        public DbSet<Comment> Comments { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

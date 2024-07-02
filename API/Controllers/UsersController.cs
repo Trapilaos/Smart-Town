@@ -4,9 +4,6 @@ using API.Entities;
 using API.Interfaces;
 using API.DTOs;
 using Microsoft.AspNetCore.Identity;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using AutoMapper;
 
 namespace API.Controllers
@@ -34,9 +31,23 @@ namespace API.Controllers
             return Ok(adminDtos);
         }
 
-        [HttpGet("{username}", Name = "GetUser")]
-        public async Task<ActionResult<MemberDTO>> GetUser(string username)
+        [HttpGet("id/{id}", Name = "GetUserById")]
+        public async Task<ActionResult<MemberDTO>> GetUserById(int id)
         {
+            var user = await _userRepository.GetMemberByIdAsync(id);
+            if (user == null) return NotFound();
+            return Ok(user);
+        }
+
+        [HttpGet("{username}", Name = "GetMemberByUsername")]
+        public async Task<ActionResult<MemberDTO>> GetMemberByUsername(string username)
+        {
+            var currentUsername = User.Identity.Name;
+            if (username != currentUsername)
+            {
+                return Unauthorized();
+            }
+
             var user = await _userRepository.GetMemberAsync(username);
             if (user == null) return NotFound();
             return Ok(user);
