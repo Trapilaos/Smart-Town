@@ -21,6 +21,7 @@ export class AccountService {
         if (user) {
           this.setCurrentUser(user);
         }
+        return user;
       })
     );
   }
@@ -34,6 +35,10 @@ export class AccountService {
         return user;
       })
     );
+  }
+
+  getUserById(userId: number) {
+    return this.http.get<User>(this.baseUrl + 'account/' + userId);
   }
 
   setCurrentUser(user: User) {

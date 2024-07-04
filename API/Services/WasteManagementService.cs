@@ -5,7 +5,6 @@ using API.Interfaces;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 
-
 namespace API.Services
 {
     public class WasteManagementService : IWasteManagementService
@@ -25,12 +24,14 @@ namespace API.Services
             _distances = CreateDistances();
         }
 
+        // Retrieves all waste bins from the database and maps them to DTOs
         public async Task<List<WasteBinDTO>> GetWasteBinsAsync()
         {
             var wasteBins = await _context.WasteBins.ToListAsync();
             return _mapper.Map<List<WasteBinDTO>>(wasteBins);
         }
 
+        // Updates a waste bin's information based on the provided DTO and returns the updated DTO
         public async Task<WasteBinDTO> UpdateWasteBinAsync(WasteBinDTO wasteBinDto)
         {
             var wasteBin = await _context.WasteBins.FindAsync(wasteBinDto.Id);
@@ -43,6 +44,7 @@ namespace API.Services
             return _mapper.Map<WasteBinDTO>(wasteBin);
         }
 
+        // Calculates the optimal path for waste collection considering the current fill levels and traffic data
         public async Task<List<string>> GetOptimalPathAsync()
         {
             var wasteBins = await _context.WasteBins.ToListAsync();
@@ -71,6 +73,7 @@ namespace API.Services
             return optimalPath;
         }
 
+        // Creates a graph of street connections for route calculation
         private Dictionary<string, List<string>> CreateGraph()
         {
             return new Dictionary<string, List<string>>
@@ -82,6 +85,7 @@ namespace API.Services
             };
         }
 
+        // Defines distances between street pairs for route calculation
         private Dictionary<(string, string), int> CreateDistances()
         {
             return new Dictionary<(string, string), int>
@@ -99,6 +103,7 @@ namespace API.Services
             };
         }
 
+        // Calculates traffic flow for each street based on traffic data
         private Dictionary<string, int> GetTrafficFlow(List<TrafficData> trafficData)
         {
             return new Dictionary<string, int>
@@ -110,6 +115,7 @@ namespace API.Services
             };
         }
 
+        // Retrieves the traffic flow value for a specific street from traffic data
         private int GetTrafficFlowForStreet(List<TrafficData> trafficData, string street)
         {
             var trafficFlow = trafficData
@@ -120,6 +126,7 @@ namespace API.Services
             return trafficFlow;
         }
 
+        // Computes heuristics for each waste bin location based on their fill levels
         private Dictionary<string, int> GetHeuristics(List<WasteBin> wasteBins)
         {
             var uniqueWasteBins = wasteBins
@@ -138,6 +145,7 @@ namespace API.Services
             return heuristics;
         }
 
+        // Implements the Traveling Salesman Problem (TSP) algorithm to find the optimal path
         private List<string> TSPAlgorithm(string start, Dictionary<string, List<string>> graph, Dictionary<string, int> trafficFlow)
         {
             var unvisitedNodes = new HashSet<string>(graph.Keys);
@@ -152,11 +160,12 @@ namespace API.Services
                 unvisitedNodes.Remove(nextNode);
             }
 
-            currentPath.Add(start); // Add the start node to the end of the path to complete the circuit
+            currentPath.Add(start); // Complete the circuit by returning to the start
 
             return OptimizePathWith2OptSwap(currentPath, trafficFlow);
         }
 
+        // Finds the closest unvisited node based on traffic flow
         private string FindClosestUnvisitedNode(string current, HashSet<string> unvisitedNodes, Dictionary<string, int> trafficFlow)
         {
             string closestNode = null;
@@ -178,6 +187,7 @@ namespace API.Services
             return closestNode;
         }
 
+        // Optimizes the path using the 2-opt swap algorithm
         private List<string> OptimizePathWith2OptSwap(List<string> path, Dictionary<string, int> trafficFlow)
         {
             bool improved = true;
@@ -207,6 +217,7 @@ namespace API.Services
             return path;
         }
 
+        // Swaps segments of the path for optimization
         private List<string> SwapPathSegments(List<string> path, int i, int j)
         {
             var reversedSegment = path.Skip(i).Take(j - i + 1).Reverse().ToList();
@@ -214,6 +225,7 @@ namespace API.Services
             return newPath;
         }
 
+        // Calculates the total cost of a given path based on traffic flow and distances
         private int CalculatePathCost(List<string> path, Dictionary<string, int> trafficFlow)
         {
             int cost = 0;

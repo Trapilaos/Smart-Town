@@ -42,5 +42,15 @@ namespace API.Controllers
 
             return Ok(eventItem);
         }
+
+        [HttpDelete("{eventId}")]
+        [Authorize(Policy = "RequireAdminRole")]
+        public async Task<IActionResult> DeleteEvent(int eventId)
+        {
+            var result = await _eventService.DeleteEventAsync(eventId);
+            if (!result) return NotFound();
+
+            return Ok();
+        }
     }
 }

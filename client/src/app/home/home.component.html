@@ -1,18 +1,81 @@
-<div class="container mt-5">
-    <div *ngIf="!registerMode" class="text-center">
-        <h1>Smart-Town</h1>
-        <p class="lead">A Smarter Way for your Town! </p>
-        <div class="text-center">
-            <button (click)="registerToggle()" class="btn btn-primary btn-lg me-2">Register</button>
-            <button class="btn btn-primary btn-info btn-lg">Learn More</button>
+<div class="container-fluid mt-5">
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-8 col-lg-6">
+            <div class="text-center">
+                <h1 class="display-4">Smart-Town</h1>
+                <p class="lead">A Smarter Way for your Town!</p>
+            </div>
+            <div id="carouselExampleIndicators" class="carousel slide" data-bs-ride="carousel">
+                <div class="carousel-indicators">
+                    <button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to="0"
+                        class="active" aria-current="true" aria-label="Slide 1">
+                        <i class="fas fa-circle"></i>
+                    </button>
+                    <button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to="1"
+                        aria-label="Slide 2">
+                        <i class="fas fa-circle"></i>
+                    </button>
+                    <button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to="2"
+                        aria-label="Slide 3">
+                        <i class="fas fa-circle"></i>
+                    </button>
+                </div>
+                <div class="carousel-inner">
+                    <div class="carousel-item active animate__animated animate__fadeIn">
+                        <img src="https://s.hdnux.com/photos/01/31/44/67/23481822/8/rawImage.jpg" class="d-block w-100"
+                            alt="Traffic Management System">
+                        <div class="carousel-caption d-none d-md-block">
+                            <h5>Traffic Management System</h5>
+                            <p>Optimize traffic flow, monitor and manage parking spaces, and improve overall traffic
+                                performance.</p>
+                        </div>
+                    </div>
+                    <div class="carousel-item animate__animated animate__fadeInLeft">
+                        <img src="https://www.photos-public-domain.com/wp-content/uploads/2011/03/garbage-cans-overflowing.jpg"
+                            class="d-block w-100" alt="Waste Management System">
+                        <div class="carousel-caption d-none d-md-block">
+                            <h5>Waste Management System</h5>
+                            <p>Monitor waste collection routes, optimize schedules, and monitor bin levels.</p>
+                        </div>
+                    </div>
+                    <div class="carousel-item animate__animated animate__fadeInRight">
+                        <img src="https://assets.the-atlas.com/project_images/9b24309ab43599b57aaa5cc7a445213a-sk1a7168_v3_dh.jpg"
+                            class="d-block w-100" alt="Smart Lighting">
+                        <div class="carousel-caption d-none d-md-block">
+                            <h5>Smart Lighting</h5>
+                            <p>Implement energy-efficient and remotely controlled lighting solutions for public spaces.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <button class="carousel-control-prev" type="button" data-bs-target="#carouselExampleIndicators"
+                    data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Previous</span>
+                </button>
+                <button class="carousel-control-next" type="button" data-bs-target="#carouselExampleIndicators"
+                    data-bs-slide="next">
+                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Next</span>
+                </button>
+            </div>
         </div>
     </div>
-
-    <div *ngIf="registerMode" class="container">
-        <div class="row justify-content-center">
-            <div class="col-4">
-                <app-register (cancelRegister)="cancelRegisterMode($event)"></app-register>
+    <div class="row justify-content-center mt-5">
+        <div class="col-12 col-md-8 col-lg-6">
+            <div class="text-center">
+                <div class="mt-4">
+                    <button *ngIf="!(accountService.currentUser$ | async)" (click)="registerToggle()"
+                        class="btn btn-primary btn-lg me-2"><i class="fas fa-user-plus"></i> Register</button>
+                    <button routerLink="/home/learn-more" class="btn btn-outline-primary btn-lg"><i
+                            class="fas fa-info-circle"></i> Learn More</button>
+                </div>
             </div>
+        </div>
+    </div>
+    <div class="row justify-content-center mt-5" *ngIf="registerMode && !(accountService.currentUser$ | async)">
+        <div class="col-12 col-md-8 col-lg-6">
+            <app-register (cancelRegister)="cancelRegisterMode($event)"></app-register>
         </div>
     </div>
 </div>

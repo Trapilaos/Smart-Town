@@ -4,6 +4,8 @@ import { MembersService } from '../_services/members.service';
 import { ParkingSpace } from '../_models/parking-space.model';
 import { Reservation } from '../_models/reservation.model';
 import { Member } from '../_models/member';
+import { ToastrService } from 'ngx-toastr';
+import { User } from '../_models/user';
 
 @Component({
   selector: 'app-traffic',
@@ -19,11 +21,12 @@ export class TrafficComponent implements OnInit {
   errorMessage: string = '';
   currentUser: Member | null = null;
   reservationDuration: number | null = null;
-  reservationTime: Date | null = null;
+  reservationTime: Date = new Date();
 
   constructor(
     private trafficAndParkingService: TrafficAndParkingService,
-    private membersService: MembersService
+    private membersService: MembersService,
+    private toastr: ToastrService
   ) { }
 
   ngOnInit(): void {
@@ -61,15 +64,12 @@ export class TrafficComponent implements OnInit {
   }
 
   loadCurrentUser() {
-    const token = localStorage.getItem('token');
-    const username = localStorage.getItem('username');
-  
-    if (token && username) {
-      this.membersService.getMemberByUsername(username).subscribe({
-        next: (user: Member) => {
-          console.log('User data:', user); // Add this line to check if user data is being received correctly
-          this.membersService.setCurrentUser(user);
-          this.currentUser = user; // Set the currentUser property in the component
+    const token = localStorage.getItem('user');
+    if (token) {
+      const user: User = JSON.parse(token);
+      this.membersService.getMemberByUsername(user.username).subscribe({
+        next: (member: Member) => {
+          this.currentUser = member;
         },
         error: (error: any) => {
           this.errorMessage = 'Failed to load user data';
@@ -77,52 +77,42 @@ export class TrafficComponent implements OnInit {
       });
     }
   }
-  
+
   selectParkingSpace(space: ParkingSpace) {
     this.selectedParkingSpaceId = space.id;
     this.reservationMessage = '';
-    this.reservationDuration = null; // Reset duration when a new space is selected
+    this.reservationDuration = null;
   }
 
   confirmReservation() {
-    
-    console.log('Selected parking space ID:', this.selectedParkingSpaceId);
-    console.log('Reservation duration:', this.reservationDuration);
-
     if (!this.currentUser) {
       this.loadCurrentUser();
-      console.log('Current user:', this.currentUser);
       return;
     }
-  
+
     if (this.currentUser && this.selectedParkingSpaceId && this.reservationDuration) {
       const reservation: Reservation = {
         userId: this.currentUser.id.toString(),
         parkingSpaceId: this.selectedParkingSpaceId,
-        reservationTime: new Date(),
+        reservationTime: new Date(this.reservationTime.getTime() - (this.reservationTime.getTimezoneOffset() * 60000)), // use current time as reservation time
         duration: this.reservationDuration
       };
-  
+
       this.trafficAndParkingService.reserveParkingSpace(reservation).subscribe({
-        next: () => {
-          this.reservationMessage = `Reservation successful for ${this.reservationDuration} minutes!`;
-          const space = this.parkingSpaces.find(space => space.id === this.selectedParkingSpaceId);
-          if (space) {
-            space.currentVehicles++;
-          }
-          alert(this.reservationMessage); // Display success alert
+        next: (response: Reservation) => {
+          this.toastr.success('Reservation successful!');
+          this.loadParkingSpaces(); // reload parking spaces data to update the page
+          this.resetReservationForm(); // reset the reservation form
         },
         error: (error: any) => {
-          this.reservationMessage = 'Failed to reserve parking space';
-          alert(this.reservationMessage); // Display error alert
+          this.toastr.error('Failed to reserve parking space');
         }
       });
     } else {
-      this.reservationMessage = 'Please select a duration';
-      alert(this.reservationMessage); // Display error alert for missing duration
+      this.toastr.warning('Please select a duration');
     }
   }
-  
+
   cancelReservation() {
     this.selectedParkingSpaceId = null;
     this.reservationMessage = '';
@@ -143,6 +133,19 @@ export class TrafficComponent implements OnInit {
   }
 
   getReservationTime(): Date {
-    return new Date();
+    return new Date(this.reservationTime.getTime() + this.reservationDuration! * 60000);
+  }
+
+  decrementVehicle(parkingSpaceId: number) {
+    const space = this.parkingSpaces.find(space => space.id === parkingSpaceId);
+    if (space) {
+      space.currentVehicles--;
+    }
+  }
+
+  resetReservationForm() {
+    this.selectedParkingSpaceId = null;
+    this.reservationDuration = null;
+    this.reservationTime = new Date();
   }
 }

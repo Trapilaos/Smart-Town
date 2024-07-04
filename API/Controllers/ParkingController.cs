@@ -32,6 +32,7 @@ namespace API.Controllers
                 return Unauthorized();
             }
 
+            reservation.ReservationTime = reservation.ReservationTime.ToUniversalTime();
             var success = await _parkingService.ReserveParkingSpaceAsync(userId, reservation.ParkingSpaceId, reservation.ReservationTime, reservation.Duration);
             if (!success)
             {

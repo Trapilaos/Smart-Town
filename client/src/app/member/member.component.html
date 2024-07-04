@@ -1,24 +1,25 @@
 <div class="events-comments-container">
-    <div class="events-container">
-      <h2 class="section-title"><i class="fas fa-calendar-alt"></i> Events</h2>
-      <div class="event-card" *ngFor="let event of events">
-        <h3 class="event-title">{{ event.title }}</h3>
-        <img class="event-photo" [src]="event.photoUrl" alt="{{ event.title }}">
-        <p class="event-description">{{ event.description }}</p>
-        <button class="event-button" (click)="declareInterest(event.id)"><i class="fas fa-heart"></i> I'm Interested</button>
-      </div>
-    </div>
-  
-    <div class="comments-container">
-      <h2 class="section-title"><i class="fas fa-comments"></i> Comments</h2>
-      
-      <div class="comment" *ngFor="let comment of comments">
-        <p class="comment-content">{{ comment.content }}</p>
-        <small class="comment-date">{{ comment.date | date }}</small>
-      </div>
-      
-      <textarea class="comment-input" [(ngModel)]="newCommentContent" placeholder="Add your comment"></textarea>
-      <button class="comment-button" (click)="addComment()"><i class="fas fa-paper-plane"></i> Submit</button>
+  <div class="events-container">
+    <h2 class="section-title"><i class="fas fa-calendar-alt"></i> Events</h2>
+    <div class="event-card" *ngFor="let event of events">
+      <h3 class="event-title">{{ event.title }}</h3>
+      <img class="event-photo" [src]="event.photoUrl" alt="{{ event.title }}">
+      <p class="event-description">{{ event.description }}</p>
+      <button class="event-button" (click)="declareInterest(event.id)">
+        <i class="fas fa-heart"></i> I'm Interested
+      </button>
     </div>
   </div>
-  
+
+  <div class="comments-container">
+    <h2 class="section-title"><i class="fas fa-comments"></i> Comments</h2>
+    <div class="comment" *ngFor="let comment of comments">
+      <p class="comment-content">{{ comment.content }}</p>
+      <small class="comment-date">{{ comment.date | date }}</small>
+    </div>
+    <textarea class="comment-input" [(ngModel)]="newCommentContent" placeholder="Add your comment"></textarea>
+    <button class="comment-button" (click)="addComment()">
+      <i class="fas fa-paper-plane"></i> Submit
+    </button>
+  </div>
+</div>

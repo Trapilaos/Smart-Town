@@ -5,13 +5,14 @@ import { catchError } from 'rxjs/operators';
 import { ParkingSpace } from '../_models/parking-space.model';
 import { TrafficData } from '../_models/traffic-data.model';
 import { Reservation } from '../_models/reservation.model';
+import { environment } from 'src/environments/environment.development';
 
 @Injectable({
   providedIn: 'root'
 })
 export class TrafficAndParkingService {
-  private trafficUrl = 'https://localhost:5001/api/traffic/current';
-  private parkingUrl = 'https://localhost:5001/api/parking';
+  private trafficUrl = `${environment.apiUrl}traffic/current`;
+  private parkingUrl = `${environment.apiUrl}parking`;
 
   constructor(private http: HttpClient) { }
 
@@ -28,7 +29,6 @@ export class TrafficAndParkingService {
   }
 
   reserveParkingSpace(reservation: Reservation): Observable<Reservation> {
-    console.log('Reservation:', reservation);
     return this.http.post<Reservation>(`${this.parkingUrl}/reserve`, reservation).pipe(
       catchError(this.handleError)
     );

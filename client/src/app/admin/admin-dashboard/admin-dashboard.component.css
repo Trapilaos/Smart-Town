@@ -1,0 +1,17 @@
+body {
+    padding-top: 5rem;
+}
+
+@media (max-width: 767px) {
+    .row {
+        justify-content: center;
+    }
+}
+
+.card:hover {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.fa-3x {
+    margin-bottom: 1rem;
+}

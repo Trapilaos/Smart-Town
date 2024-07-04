@@ -1,0 +1,46 @@
+body {
+    padding-top: 5rem;
+}
+
+.table>tbody>tr>td,
+.table>tbody>tr>th,
+.table>tfoot>tr>td,
+.table>tfoot>tr>th,
+.table>thead>tr>td,
+.table>thead>tr>th {
+    padding: 1rem;
+    vertical-align: middle;
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(0, 0, 0, 0.075);
+}
+
+.fa-check-circle {
+    font-size: 1.25rem;
+    vertical-align: middle;
+}
+
+.fa-user-check,
+.fa-user-shield {
+    font-size: 1rem;
+    vertical-align: middle;
+}
+
+.btn-primary {
+    color: #fff;
+    background-color: #007bff;
+    border-color: #007bff;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+}
+
+.btn-primary:hover {
+    color: #fff;
+    background-color: #0069d9;
+    border-color: #0062cc;
+}
+
+.btn-primary+.btn-primary {
+    margin-left: 1rem;
+}

@@ -15,6 +15,7 @@ namespace API.Services
             _logger = logger;
         }
 
+        // Fetches the lighting status and brightness level based on weather conditions and time of day for a given town
         public async Task<(string, string)> GetLightingStatusAsync(string town)
         {
             var apiKey = _configuration["WeatherApi:ApiKey"];
@@ -61,6 +62,7 @@ namespace API.Services
             return (lightingStatus, brightnessLevel);
         }
 
+        // Determines the brightness level of the lights based on the current time, sunset and sunrise times, and weather conditions
         private int GetBrightnessLevel(TimeSpan currentTime, TimeSpan sunsetTime, TimeSpan sunriseTime, string condition)
         {
             if (currentTime < sunriseTime || currentTime > sunsetTime)

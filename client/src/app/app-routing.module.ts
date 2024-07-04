@@ -1,7 +1,6 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { HomeComponent } from './home/home.component';
-import { ListsComponent } from './lists/lists.component';
 import { PayComponent } from './pay/pay.component';
 import { TrafficComponent } from './traffic/traffic.component';
 import { TrashComponent } from './trash/trash.component';
@@ -14,6 +13,7 @@ import { ServerErrorComponent } from './errors/server-error/server-error.compone
 import { MemberComponent } from './member/member.component';
 import { AdminDashboardComponent } from './admin/admin-dashboard/admin-dashboard.component';
 import { EventCreateComponent } from './admin/event-create/event-create.component';
+import { UserManagementComponent } from './admin/user-management/user-management.component';
 
 const routes: Routes = [
   { path: '', component: HomeComponent },
@@ -22,8 +22,7 @@ const routes: Routes = [
     runGuardsAndResolvers: 'always',
     canActivate: [authGuard],
     children: [
-      { path: 'members', component: MemberComponent },
-      { path: 'lists', component: ListsComponent },
+      { path: 'member', component: MemberComponent },
       { path: 'pay', component: PayComponent },
       { path: 'traffic', component: TrafficComponent },
       { path: 'trash', component: TrashComponent },
@@ -32,10 +31,12 @@ const routes: Routes = [
   },
   {
     path: 'admin',
+    runGuardsAndResolvers: 'always',
     canActivate: [adminGuard],
     children: [
       { path: '', component: AdminDashboardComponent },
-      { path: 'create-event', component: EventCreateComponent }
+      { path: 'create-event', component: EventCreateComponent },
+      { path: 'user-management', component: UserManagementComponent }
     ]
   },
   { path: 'errors', component: TestErrorComponent },

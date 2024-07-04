@@ -1,0 +1,32 @@
+<div class="container mt-5">
+    <h2 class="text-center mb-4">Manage User Roles</h2>
+
+    <table class="table table-striped table-hover">
+        <thead>
+            <tr>
+                <th>Username</th>
+                <th>Roles</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr *ngFor="let user of users">
+                <td>{{ user.username }}</td>
+                <td>
+                    <span *ngFor="let role of user.roles">
+                        <i class="fas fa-check-circle text-success mr-2"></i>{{ role }}
+                    </span>
+                </td>
+                <td>
+                    <button class="btn btn-sm btn-primary mr-2" (click)="updateUserRoles(user.username, ['Member'])">
+                        <i class="fas fa-user-check mr-2"></i>Set Member
+                    </button>
+                    <button class="btn btn-sm btn-primary mr-2" (click)="updateUserRoles(user.username, ['Admin'])">
+                        <i class="fas fa-user-shield mr-2"></i>Set Admin
+                    </button>
+
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>

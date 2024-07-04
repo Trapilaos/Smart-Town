@@ -1,3 +1,4 @@
+using API.Data;
 using API.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -9,9 +10,12 @@ namespace API.Controllers
     public class AdminController : BaseApiController
     {
         private readonly UserManager<AppUser> _userManager;
-        public AdminController(UserManager<AppUser> userManager)
+        private readonly DataContext _context;
+
+        public AdminController(UserManager<AppUser> userManager, DataContext context)
         {
             _userManager = userManager;
+            _context = context;
         }
 
         [Authorize(Policy = "RequireAdminRole")]
@@ -61,6 +65,15 @@ namespace API.Controllers
         public ActionResult GetPhotosForModeration()
         {
             return Ok("Admins or moderators can see this");
+        }
+
+        [Authorize(Policy = "RequireAdminRole")]
+        [HttpPost("create-event")]
+        public async Task<ActionResult<Event>> CreateEvent(Event newEvent)
+        {
+            _context.Events.Add(newEvent);
+            await _context.SaveChangesAsync();
+            return Ok(newEvent);
         }
     }
 }

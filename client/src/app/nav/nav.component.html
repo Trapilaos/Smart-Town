@@ -5,12 +5,18 @@
     <div class="collapse navbar-collapse" id="navbarCollapse">
       <ul class="navbar-nav me-auto mb-2 mb-md-0">
         <ng-container *ngIf="(accountService.currentUser$ | async) as user">
-          <li class="nav-item"><a class="nav-link" routerLink="/member" routerLinkActive="active">Community</a></li>
-          <li class="nav-item"><a class="nav-link" routerLink="/lighting" routerLinkActive="active">Lighting</a></li>
-          <li class="nav-item"><a class="nav-link" routerLink="/traffic" routerLinkActive="active">Traffic</a></li>
-          <li class="nav-item"><a class="nav-link" routerLink="/trash" routerLinkActive="active">Trash</a></li>
-          <li class="nav-item"><a class="nav-link" routerLink="/pay" routerLinkActive="active">Payments</a></li>
-          <li class="nav-item" *ngIf="user.roles.includes('Admin')"><a class="nav-link" routerLink="/admin">Admin</a></li>
+          <ng-container *ngIf="user.roles.includes('Admin'); else userLinks">
+            <li class="nav-item"><a class="nav-link" routerLink="/admin" routerLinkActive="active">Admin Dashboard</a></li>
+            <li class="nav-item"><a class="nav-link" routerLink="/admin/create-event" routerLinkActive="active">Create Event</a></li>
+            <li class="nav-item"><a class="nav-link" routerLink="/admin/user-management" routerLinkActive="active">Manage Users</a></li>
+          </ng-container>
+          <ng-template #userLinks>
+            <li class="nav-item"><a class="nav-link" routerLink="/member" routerLinkActive="active">Community</a></li>
+            <li class="nav-item"><a class="nav-link" routerLink="/lighting" routerLinkActive="active">Lighting</a></li>
+            <li class="nav-item"><a class="nav-link" routerLink="/traffic" routerLinkActive="active">Traffic</a></li>
+            <li class="nav-item"><a class="nav-link" routerLink="/trash" routerLinkActive="active">Trash</a></li>
+            <li class="nav-item"><a class="nav-link" routerLink="/pay" routerLinkActive="active">Payments</a></li>
+          </ng-template>
         </ng-container>
         <li class="nav-item"><a class="nav-link" routerLink="/errors" routerLinkActive="active">Errors</a></li>
       </ul>
@@ -25,21 +31,12 @@
         </div>
       </div>
 
-      <form *ngIf="!(accountService.currentUser$ | async)" #loginForm="ngForm" class="d-flex ms-auto" (ngSubmit)="login()" autocomplete="off">
-        <input 
-          name="username"
-          [(ngModel)]="model.username"
-          class="form-control me-2" 
-          type="text" 
-          placeholder="Username" 
+      <form *ngIf="!(accountService.currentUser$ | async)" #loginForm="ngForm" class="d-flex ms-auto"
+        (ngSubmit)="login()" autocomplete="off">
+        <input name="username" [(ngModel)]="model.username" class="form-control me-2" type="text" placeholder="Username"
           required>
-        <input 
-          name="password"
-          [(ngModel)]="model.password"
-          class="form-control me-2" 
-          type="password" 
-          placeholder="Password" 
-          required>
+        <input name="password" [(ngModel)]="model.password" class="form-control me-2" type="password"
+          placeholder="Password" required>
         <button class="btn btn-success" type="submit">Login</button>
       </form>
     </div>

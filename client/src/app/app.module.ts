@@ -21,6 +21,7 @@ import { ErrorInterceptor } from './_interceptors/error.interceptor';
 import { JwtInterceptor } from './_interceptors/jwt.interceptor';
 import { AdminDashboardComponent } from './admin/admin-dashboard/admin-dashboard.component';
 import { EventCreateComponent } from './admin/event-create/event-create.component';
+import { UserManagementComponent } from './admin/user-management/user-management.component';
 
 @NgModule({
   declarations: [
@@ -37,7 +38,8 @@ import { EventCreateComponent } from './admin/event-create/event-create.componen
     ServerErrorComponent,
     MemberComponent,
     AdminDashboardComponent,
-    EventCreateComponent 
+    EventCreateComponent,
+    UserManagementComponent 
   ],
   imports: [
     BrowserModule,

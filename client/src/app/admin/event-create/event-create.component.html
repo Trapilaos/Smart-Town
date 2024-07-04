@@ -1,1 +1,24 @@
-<p>event-create works!</p>
+<div class="container mt-5">
+    <h2 class="text-center mb-4">Create Event</h2>
+
+    <form (ngSubmit)="createEvent()" class="mx-auto" style="max-width: 600px;">
+        <div class="mb-3">
+            <label for="title" class="form-label">Title</label>
+            <input type="text" class="form-control" id="title" [(ngModel)]="model.title" name="title" required>
+        </div>
+        <div class="mb-3">
+            <label for="description" class="form-label">Description</label>
+            <textarea class="form-control" id="description" [(ngModel)]="model.description" name="description"
+                required></textarea>
+        </div>
+        <div class="mb-3">
+            <label for="photoUrl" class="form-label">Photo URL</label>
+            <input type="text" class="form-control" id="photoUrl" [(ngModel)]="model.photoUrl" name="photoUrl" required>
+        </div>
+        <div class="mb-3">
+            <label for="date" class="form-label">Date</label>
+            <input type="date" class="form-control" id="date" [(ngModel)]="model.date" name="date" required>
+        </div>
+        <button type="submit" class="btn btn-primary w-100">Create Event</button>
+    </form>
+</div>

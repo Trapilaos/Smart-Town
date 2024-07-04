@@ -54,6 +54,9 @@ namespace API.Services
             _context.Reservations.Add(reservation);
             await _context.SaveChangesAsync();
 
+            // Schedule a task to decrement vehicles after the reservation duration
+            _ = DecrementVehicleAfterDuration(parkingSpaceId, duration);
+
             return true;
         }
 
@@ -75,6 +78,19 @@ namespace API.Services
             }
 
             await _context.SaveChangesAsync();
+        }
+
+        private async Task DecrementVehicleAfterDuration(int parkingSpaceId, int duration)
+        {
+            // Wait for the duration time in milliseconds
+            await Task.Delay(duration * 60 * 1000);
+
+            var parkingSpace = await _context.ParkingSpaces.FindAsync(parkingSpaceId);
+            if (parkingSpace != null)
+            {
+                parkingSpace.CurrentVehicles--;
+                await _context.SaveChangesAsync();
+            }
         }
     }
 }

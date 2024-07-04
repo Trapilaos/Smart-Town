@@ -4,7 +4,6 @@ import { Observable } from 'rxjs';
 import { Event } from '../_models/event.model';
 import { environment } from 'src/environments/environment.development';
 
-
 @Injectable({
   providedIn: 'root'
 })
@@ -19,5 +18,13 @@ export class EventService {
 
   declareInterest(eventId: number): Observable<Event> {
     return this.http.post<Event>(`${this.apiUrl}/${eventId}/interest`, {});
+  }
+
+  createEvent(event: Event): Observable<Event> {
+    return this.http.post<Event>(this.apiUrl, event);
+  }
+
+  deleteEvent(eventId: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/${eventId}`);
   }
 }

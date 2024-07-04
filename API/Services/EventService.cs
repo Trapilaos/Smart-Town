@@ -21,19 +21,32 @@ namespace API.Services
             return newEvent;
         }
 
-        public async Task<IEnumerable<Event>> GetEventsAsync()
+        public async Task<List<Event>> GetEventsAsync()
         {
             return await _context.Events.ToListAsync();
         }
 
         public async Task<Event> DeclareInterestAsync(int eventId, string userId)
         {
-            var eventItem = await _context.Events.FindAsync(eventId);
-            if (eventItem == null) return null;
+            var ev = await _context.Events.FindAsync(eventId);
+            if (ev == null) return null;
 
-            eventItem.InterestedUsers.Add(userId);
+            if (ev.InterestedUsers.Contains(userId)) return ev;
+
+            ev.InterestedUsers.Add(userId);
             await _context.SaveChangesAsync();
-            return eventItem;
+
+            return ev;
+        }
+
+        public async Task<bool> DeleteEventAsync(int eventId)
+        {
+            var ev = await _context.Events.FindAsync(eventId);
+            if (ev == null) return false;
+
+            _context.Events.Remove(ev);
+            await _context.SaveChangesAsync();
+            return true;
         }
     }
 }

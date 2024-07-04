@@ -41,7 +41,7 @@ export class MemberComponent implements OnInit {
     const newComment: Comment = {
       id: 0,
       content: this.newCommentContent,
-      userId: 'currentUserId', // Replace with actual user ID
+      userId: 'currentUserId', 
       date: new Date()
     };
 
@@ -51,4 +51,5 @@ export class MemberComponent implements OnInit {
       this.toastr.success('Comment added successfully!');
     });
   }
+
 }
