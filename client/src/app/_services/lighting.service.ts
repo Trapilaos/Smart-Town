@@ -1,8 +1,7 @@
-// src/app/_services/lighting.service.ts
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { environment } from '../../environments/environment';
-import { catchError, Observable , throwError } from 'rxjs';
+import { catchError, Observable, throwError } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
@@ -10,7 +9,7 @@ import { catchError, Observable , throwError } from 'rxjs';
 export class LightingService {
   private apiUrl = `${environment.apiUrl}lighting/status`;
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   getLightingStatus(town: string): Observable<any> {
     return this.http.get<any>(`${this.apiUrl}?town=${town}`).pipe(

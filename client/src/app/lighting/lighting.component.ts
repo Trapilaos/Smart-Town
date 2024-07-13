@@ -1,4 +1,3 @@
-// src/app/lighting/lighting.component.ts
 import { Component, OnInit } from '@angular/core';
 import { LightingService } from '../_services/lighting.service';
 
@@ -11,6 +10,8 @@ export class LightingComponent implements OnInit {
   statusMessage: string = 'Checking...';
   lightingStatus: string = 'Unknown';
   brightnessLevel: string = '';
+  nextOnTime: string | null = null;
+  nextOffTime: string | null = null;
 
   constructor(private lightingService: LightingService) {}
 
@@ -23,8 +24,10 @@ export class LightingComponent implements OnInit {
       next: (response) => {
         this.lightingStatus = response.status;
         this.brightnessLevel = response.brightness;
+        this.nextOnTime = response.nextOnTime;
+        this.nextOffTime = response.nextOffTime;
         this.statusMessage = this.brightnessLevel 
-          ? `Lights are ${this.lightingStatus} at ${this.brightnessLevel} brightness` 
+          ? `Lights are ${this.lightingStatus} at ${this.brightnessLevel} brightness`
           : `Lights are ${this.lightingStatus}`;
       },
       error: (error) => {

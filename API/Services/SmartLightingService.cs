@@ -1,4 +1,7 @@
+using API.DTOs;
+using API.Entities;
 using Newtonsoft.Json.Linq;
+using System;
 
 namespace API.Services
 {
@@ -15,8 +18,7 @@ namespace API.Services
             _logger = logger;
         }
 
-        // Fetches the lighting status and brightness level based on weather conditions and time of day for a given town
-        public async Task<(string, string)> GetLightingStatusAsync(string town)
+        public async Task<LightingStatusDTO> GetLightingStatusAsync(string town)
         {
             var apiKey = _configuration["WeatherApi:ApiKey"];
             var baseUrl = _configuration["WeatherApi:BaseUrl"];
@@ -33,47 +35,54 @@ namespace API.Services
             }
 
             var responseData = await response.Content.ReadAsStringAsync();
-            _logger.LogInformation($"Weather API response data: {responseData}");
-            var json = JObject.Parse(responseData);
+            var weatherResponse = JObject.Parse(responseData).ToObject<WeatherResponse>();
 
-            var condition = json["current"]["condition"]["text"].ToString().ToLower();
-            var isDaytime = json["current"]["is_day"].ToObject<int>() == 1;
+            var condition = weatherResponse.current.condition.text.ToLower();
+            var isDaytime = weatherResponse.current.is_day == 1;
 
-            var sunset = json["forecast"]["forecastday"][0]["astro"]["sunset"].ToString();
-            var sunrise = json["forecast"]["forecastday"][0]["astro"]["sunrise"].ToString();
+            var sunset = DateTime.Parse(weatherResponse.forecast.forecastday[0].astro.sunset);
+            var sunrise = DateTime.Parse(weatherResponse.forecast.forecastday[0].astro.sunrise);
 
-            var currentTime = DateTime.Now.TimeOfDay;
-            var sunsetTime = DateTime.Parse(sunset).TimeOfDay;
-            var sunriseTime = DateTime.Parse(sunrise).TimeOfDay;
+            var currentDateTime = DateTime.Now;
+            var sunsetDateTime = DateTime.Today.Add(sunset.TimeOfDay);
+            var sunriseDateTime = DateTime.Today.Add(sunrise.TimeOfDay);
 
-            var lightingStatus = "Off";
-            string brightnessLevel = string.Empty;
+            var lightingStatusDTO = new LightingStatusDTO();
 
-            // Adjust lighting status based on conditions and time of day
-            if (currentTime < sunriseTime || currentTime > sunsetTime)
+            if (sunsetDateTime < currentDateTime || sunriseDateTime > currentDateTime || IsWeatherMoody(condition))
             {
-                lightingStatus = "On";
-                int brightness = GetBrightnessLevel(currentTime, sunsetTime, sunriseTime, condition);
-                brightnessLevel = $"{brightness}%";
+                lightingStatusDTO.Status = "On";
+                lightingStatusDTO.Brightness = GetBrightnessLevel(currentDateTime, sunsetDateTime, sunriseDateTime, condition).ToString() + "%";
+                lightingStatusDTO.NextOffTime = sunriseDateTime.Date.Add(sunrise.TimeOfDay);
+            }
+            else
+            {
+                lightingStatusDTO.Status = "Off";
+                lightingStatusDTO.Brightness = null;
+                lightingStatusDTO.NextOnTime = sunsetDateTime.Date.Add(sunset.TimeOfDay);
             }
 
-            _logger.LogInformation($"Determined lighting status: {lightingStatus}, Brightness Level: {brightnessLevel}");
+            _logger.LogInformation($"Determined lighting status: {lightingStatusDTO.Status}, Brightness Level: {lightingStatusDTO.Brightness}");
 
-            return (lightingStatus, brightnessLevel);
+            return lightingStatusDTO;
         }
 
-        // Determines the brightness level of the lights based on the current time, sunset and sunrise times, and weather conditions
-        private int GetBrightnessLevel(TimeSpan currentTime, TimeSpan sunsetTime, TimeSpan sunriseTime, string condition)
+        private int GetBrightnessLevel(DateTime currentDateTime, DateTime sunsetDateTime, DateTime sunriseDateTime, string condition)
         {
-            if (currentTime < sunriseTime || currentTime > sunsetTime)
+            if (IsWeatherMoody(condition))
             {
-                if (currentTime < sunriseTime.Add(TimeSpan.FromMinutes(30)) || currentTime > sunsetTime.Add(TimeSpan.FromMinutes(30)))
+                return 100; // Weather is moody, always return 100
+            }
+
+            if (currentDateTime < sunriseDateTime || currentDateTime > sunsetDateTime)
+            {
+                if (currentDateTime >= sunriseDateTime.AddMinutes(-30) && currentDateTime < sunriseDateTime)
                 {
-                    return 60; // Just before sunrise or just after sunset
+                    return 60; // Just before sunrise
                 }
-                else if (currentTime > sunsetTime.Add(TimeSpan.FromMinutes(30)) && currentTime <= sunsetTime.Add(TimeSpan.FromHours(1)))
+                else if (currentDateTime > sunsetDateTime && currentDateTime <= sunsetDateTime.AddMinutes(30))
                 {
-                    return 75; // After sunset
+                    return 75; // Just after sunset
                 }
                 else
                 {
@@ -82,6 +91,13 @@ namespace API.Services
             }
 
             return 0; // Daytime, lights off
+        }
+
+
+        private bool IsWeatherMoody(string condition)
+        {
+            var moodyConditions = new List<string> { "cloudy", "overcast", "rain", "fog", "mist", "drizzle" };
+            return moodyConditions.Any(condition.Contains);
         }
     }
 }

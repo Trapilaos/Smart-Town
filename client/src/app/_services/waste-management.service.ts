@@ -24,8 +24,7 @@ export class WasteManagementService {
       catchError(this.handleError)
     );
   }
-  
-  
+
   updateWasteBin(wasteBin: WasteBin): Observable<WasteBin> {
     return this.http.put<WasteBin>(`${this.wasteBinsUrl}/${wasteBin.id}`, wasteBin).pipe(
       catchError(this.handleError)
@@ -42,5 +41,4 @@ export class WasteManagementService {
     }
     return throwError('Something bad happened; please try again later.');
   }
-  
 }

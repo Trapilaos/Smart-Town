@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { WasteManagementService } from '../_services/waste-management.service';
 import { WasteBin } from '../_models/waste-bin.model';
+import { ToastrService } from 'ngx-toastr';
 
 @Component({
   selector: 'app-trash',
@@ -12,14 +13,15 @@ export class TrashComponent implements OnInit {
   optimalPath: string[] = [];
   loading: boolean = false;
   errorMessage: string = '';
+  statusMessage: string = '';
 
-  constructor(private wasteManagementService: WasteManagementService) {}
+  constructor(private wasteManagementService: WasteManagementService, private toastr: ToastrService) { }
 
   ngOnInit(): void {
     this.loadWasteBins();
-    this.calculateOptimalPath(); 
+    this.calculateOptimalPath();
   }
-  
+
   loadWasteBins() {
     this.loading = true;
     this.wasteManagementService.getWasteBins().subscribe({
@@ -37,8 +39,15 @@ export class TrashComponent implements OnInit {
   calculateOptimalPath() {
     this.loading = true;
     this.wasteManagementService.getOptimalPath().subscribe({
-      next: (path: string[]) => {
-        this.optimalPath = path;
+      next: (response: any) => {
+        if (response.message) {
+          this.statusMessage = response.message;
+          this.optimalPath = [];
+          this.toastr.info(this.statusMessage);
+        } else {
+          this.optimalPath = response;
+          this.statusMessage = '';
+        }
         this.loading = false;
       },
       error: (error: any) => {
@@ -53,12 +62,12 @@ export class TrashComponent implements OnInit {
     this.wasteManagementService.updateWasteBin(bin).subscribe({
       next: (updatedBin: WasteBin) => {
         console.log('Waste bin updated:', updatedBin);
-        // You can optionally update the bin object in the wasteBins array with the updated object
         this.wasteBins = this.wasteBins.map(b => b.id === bin.id ? updatedBin : b);
+        this.calculateOptimalPath(); // Recalculate the optimal path after emptying a bin
       },
       error: (error: any) => {
         console.error('Error updating waste bin:', error);
       }
     });
-  }    
+  }
 }

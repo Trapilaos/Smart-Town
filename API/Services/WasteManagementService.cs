@@ -3,6 +3,7 @@ using API.DTOs;
 using API.Entities;
 using API.Interfaces;
 using AutoMapper;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace API.Services
@@ -11,27 +12,25 @@ namespace API.Services
     {
         private readonly DataContext _context;
         private readonly IMapper _mapper;
-        private readonly ILogger<WasteManagementService> _logger;
-        private readonly Dictionary<string, List<string>> _graph;
-        private readonly Dictionary<(string, string), int> _distances;
+        private readonly Dictionary<string, List<string>> _graph; // Graph of waste bin locations
+        private readonly Dictionary<(string, string), int> _distances; // Distances between waste bin locations
 
-        public WasteManagementService(DataContext context, IMapper mapper, ILogger<WasteManagementService> logger)
+        public WasteManagementService(DataContext context, IMapper mapper)
         {
             _context = context;
             _mapper = mapper;
-            _logger = logger;
             _graph = CreateGraph();
             _distances = CreateDistances();
         }
 
-        // Retrieves all waste bins from the database and maps them to DTOs
+        // Get all waste bins
         public async Task<List<WasteBinDTO>> GetWasteBinsAsync()
         {
             var wasteBins = await _context.WasteBins.ToListAsync();
             return _mapper.Map<List<WasteBinDTO>>(wasteBins);
         }
 
-        // Updates a waste bin's information based on the provided DTO and returns the updated DTO
+        // Update a waste bin
         public async Task<WasteBinDTO> UpdateWasteBinAsync(WasteBinDTO wasteBinDto)
         {
             var wasteBin = await _context.WasteBins.FindAsync(wasteBinDto.Id);
@@ -44,14 +43,15 @@ namespace API.Services
             return _mapper.Map<WasteBinDTO>(wasteBin);
         }
 
-        // Calculates the optimal path for waste collection considering the current fill levels and traffic data
-        public async Task<List<string>> GetOptimalPathAsync()
+        // Get the optimal path for waste collection
+        public async Task<(bool, List<string>)> GetOptimalPathAsync()
         {
             var wasteBins = await _context.WasteBins.ToListAsync();
-            var heuristics = GetHeuristics(wasteBins);
 
-            _logger.LogInformation("Waste Bins: {@WasteBins}", wasteBins);
-            _logger.LogInformation("Heuristics: {@Heuristics}", heuristics);
+            if (!wasteBins.Any(bin => bin.CurrentFillLevel > 0))
+            {
+                return (false, new List<string> { "No need for optimal path, all bins are empty" });
+            }
 
             var currentTime = DateTime.Now;
             var trafficData = await _context.TrafficData
@@ -59,21 +59,12 @@ namespace API.Services
                 .ToListAsync();
 
             var trafficFlow = GetTrafficFlow(trafficData);
-
-            _logger.LogInformation("Traffic Flow: {@TrafficFlow}", trafficFlow);
-
             var startLocation = wasteBins.OrderByDescending(bin => bin.CurrentFillLevel).First().Location;
+            var optimalPath = PSOAlgorithm(startLocation, wasteBins, trafficFlow);
 
-            _logger.LogInformation("Start Location: {StartLocation}", startLocation);
-
-            var optimalPath = TSPAlgorithm(startLocation, _graph, trafficFlow);
-
-            _logger.LogInformation("Optimal Path: {@OptimalPath}", optimalPath);
-
-            return optimalPath;
+            return (true, optimalPath);
         }
-
-        // Creates a graph of street connections for route calculation
+        // Create a graph of the waste bin locations
         private Dictionary<string, List<string>> CreateGraph()
         {
             return new Dictionary<string, List<string>>
@@ -85,25 +76,27 @@ namespace API.Services
             };
         }
 
-        // Defines distances between street pairs for route calculation
+        // Create a dictionary of distances between waste bin locations
         private Dictionary<(string, string), int> CreateDistances()
         {
             return new Dictionary<(string, string), int>
             {
-                { ("3is Septemvriou", "Alexandras"), 50 },
-                { ("3is Septemvriou", "Stadiou"), 100 },
-                { ("Alexandras", "3is Septemvriou"), 50 },
-                { ("Alexandras", "Stadiou"), 50 },
-                { ("Alexandras", "Vouliagmenis"), 100 },
-                { ("Stadiou", "3is Septemvriou"), 100 },
-                { ("Stadiou", "Alexandras"), 50 },
-                { ("Stadiou", "Vouliagmenis"), 50 },
-                { ("Vouliagmenis", "Alexandras"), 100 },
-                { ("Vouliagmenis", "Stadiou"), 50 }
+                { ("3is Septemvriou", "Alexandras"), 200 },
+                { ("3is Septemvriou", "Stadiou"), 300 },
+                { ("Alexandras", "3is Septemvriou"), 200 },
+                { ("Alexandras", "Stadiou"), 150 },
+                { ("Alexandras", "Vouliagmenis"), 400 },
+                { ("Stadiou", "3is Septemvriou"), 300 },
+                { ("Stadiou", "Alexandras"), 150 },
+                { ("Stadiou", "Vouliagmenis"), 200 },
+                { ("Vouliagmenis", "Alexandras"), 400 },
+                { ("Vouliagmenis", "Stadiou"), 200 },
+                { ("3is Septemvriou", "Vouliagmenis"), 250 },
+                { ("Vouliagmenis", "3is Septemvriou"), 250 }
             };
         }
 
-        // Calculates traffic flow for each street based on traffic data
+        // Get traffic flow data for each street
         private Dictionary<string, int> GetTrafficFlow(List<TrafficData> trafficData)
         {
             return new Dictionary<string, int>
@@ -115,127 +108,122 @@ namespace API.Services
             };
         }
 
-        // Retrieves the traffic flow value for a specific street from traffic data
+        // Get traffic flow for a specific street
         private int GetTrafficFlowForStreet(List<TrafficData> trafficData, string street)
         {
-            var trafficFlow = trafficData
+            return trafficData
                 .Where(td => td.Location == street)
                 .OrderByDescending(td => td.Timestamp)
                 .FirstOrDefault()?.TrafficFlow ?? 0;
-
-            return trafficFlow;
         }
 
-        // Computes heuristics for each waste bin location based on their fill levels
-        private Dictionary<string, int> GetHeuristics(List<WasteBin> wasteBins)
+        // Implement the Particle Swarm Optimization algorithm to find the optimal path
+        public List<string> PSOAlgorithm(string start, List<WasteBin> wasteBins, Dictionary<string, int> trafficFlow)
         {
-            var uniqueWasteBins = wasteBins
-                .GroupBy(bin => bin.Location)
-                .Select(group => group.First())
-                .ToList();
+            int numParticles = 30;
+            int maxIterations = 100;
+            var nodes = wasteBins.Select(bin => bin.Location).Distinct().ToList();
+            var particles = InitializeParticles(start, nodes, numParticles, trafficFlow);
+            var bestParticle = particles.OrderBy(p => p.BestCost).First();
 
-            var heuristics = new Dictionary<string, int>();
-            var maxFillLevel = wasteBins.Max(bin => bin.CurrentFillLevel);
-
-            foreach (var bin in uniqueWasteBins)
+            for (int i = 0; i < maxIterations; i++)
             {
-                heuristics[bin.Location] = maxFillLevel - bin.CurrentFillLevel;
-            }
-
-            return heuristics;
-        }
-
-        // Implements the Traveling Salesman Problem (TSP) algorithm to find the optimal path
-        private List<string> TSPAlgorithm(string start, Dictionary<string, List<string>> graph, Dictionary<string, int> trafficFlow)
-        {
-            var unvisitedNodes = new HashSet<string>(graph.Keys);
-            unvisitedNodes.Remove(start);
-
-            var currentPath = new List<string> { start };
-
-            while (unvisitedNodes.Count > 0)
-            {
-                var nextNode = FindClosestUnvisitedNode(currentPath.Last(), unvisitedNodes, trafficFlow);
-                currentPath.Add(nextNode);
-                unvisitedNodes.Remove(nextNode);
-            }
-
-            currentPath.Add(start); // Complete the circuit by returning to the start
-
-            return OptimizePathWith2OptSwap(currentPath, trafficFlow);
-        }
-
-        // Finds the closest unvisited node based on traffic flow
-        private string FindClosestUnvisitedNode(string current, HashSet<string> unvisitedNodes, Dictionary<string, int> trafficFlow)
-        {
-            string closestNode = null;
-            int minDistance = int.MaxValue;
-
-            foreach (var neighbor in _graph[current])
-            {
-                if (!unvisitedNodes.Contains(neighbor)) continue;
-
-                var distance = trafficFlow.GetValueOrDefault(neighbor, int.MaxValue);
-
-                if (distance < minDistance)
+                foreach (var particle in particles)
                 {
-                    minDistance = distance;
-                    closestNode = neighbor;
-                }
-            }
-
-            return closestNode;
-        }
-
-        // Optimizes the path using the 2-opt swap algorithm
-        private List<string> OptimizePathWith2OptSwap(List<string> path, Dictionary<string, int> trafficFlow)
-        {
-            bool improved = true;
-
-            while (improved)
-            {
-                improved = false;
-
-                for (int i = 1; i < path.Count - 2; i++)
-                {
-                    for (int j = i + 1; j < path.Count - 1; j++)
+                    particle.UpdatePosition(GenerateNewPosition(particle.Position, wasteBins)); // Corrected argument here
+                    if (particle.BestCost < bestParticle.BestCost)
                     {
-                        var newPath = SwapPathSegments(path, i, j);
-                        var newPathCost = CalculatePathCost(newPath, trafficFlow);
-                        var currentPathCost = CalculatePathCost(path, trafficFlow);
-
-                        if (newPathCost < currentPathCost)
-                        {
-                            path = newPath;
-                            improved = true;
-                            break;
-                        }
+                        bestParticle = particle;
                     }
                 }
             }
 
-            return path;
+            return bestParticle.BestPosition;
         }
 
-        // Swaps segments of the path for optimization
-        private List<string> SwapPathSegments(List<string> path, int i, int j)
-        {
-            var reversedSegment = path.Skip(i).Take(j - i + 1).Reverse().ToList();
-            var newPath = path.Take(i).Concat(reversedSegment).Concat(path.Skip(j + 1)).ToList();
-            return newPath;
-        }
 
-        // Calculates the total cost of a given path based on traffic flow and distances
-        private int CalculatePathCost(List<string> path, Dictionary<string, int> trafficFlow)
+        // Initialize particles for the PSO algorithm
+        private List<Particle> InitializeParticles(string start, List<string> nodes, int numParticles, Dictionary<string, int> trafficFlow)
         {
-            int cost = 0;
-
-            for (int i = 0; i < path.Count - 1; i++)
+            var particles = new List<Particle>();
+            for (int i = 0; i < numParticles; i++)
             {
-                cost += trafficFlow.GetValueOrDefault(path[i], int.MaxValue) + _distances.GetValueOrDefault((path[i], path[i + 1]), int.MaxValue);
+                var initialPosition = new List<string> { start };
+                var random = new Random();
+                var remainingNodes = nodes
+                    .Where(node => _context.WasteBins.FirstOrDefault(bin => bin.Location == node)?.CurrentFillLevel > 0)
+                    .Except(new[] { start })
+                    .ToList();
+
+                while (remainingNodes.Count > 0)
+                {
+                    int index = random.Next(remainingNodes.Count);
+                    string node = remainingNodes[index];
+
+                    if (node != initialPosition.Last())
+                    {
+                        initialPosition.Add(node);
+                        remainingNodes.RemoveAt(index);
+                    }
+                }
+
+                initialPosition.Add(start);
+                particles.Add(new Particle(initialPosition, _distances, trafficFlow));
+            }
+            return particles;
+        }
+
+        // Generate a new position for a particle in the PSO algorithm
+        private List<string> GenerateNewPosition(List<string> currentPosition, List<WasteBin> wasteBins)
+        {
+            var newPosition = new List<string>();
+            var random = new Random();
+
+            // Start with the same node as the current position
+            newPosition.Add(currentPosition[0]);
+
+            // Try to create a path with only non-empty nodes
+            var nonEmptyNodes = wasteBins
+                .Where(bin => bin.CurrentFillLevel > 0 && bin.Location != currentPosition[0])
+                .Select(bin => bin.Location)
+                .ToList();
+
+            if (nonEmptyNodes.Count >= currentPosition.Count - 2)
+            {
+                // Visit all non-empty nodes
+                while (nonEmptyNodes.Count > 0)
+                {
+                    int index = random.Next(nonEmptyNodes.Count);
+                    string node = nonEmptyNodes[index];
+
+                    newPosition.Add(node);
+                    nonEmptyNodes.RemoveAt(index);
+                }
+            }
+            else
+            {
+                // If there aren't enough non-empty nodes, visit all nodes
+                var remainingNodes = wasteBins
+                    .Where(bin => bin.Location != currentPosition[0])
+                    .Select(bin => bin.Location)
+                    .ToList();
+
+                while (remainingNodes.Count > 0)
+                {
+                    int index = random.Next(remainingNodes.Count);
+                    string node = remainingNodes[index];
+
+                    newPosition.Add(node);
+                    remainingNodes.RemoveAt(index);
+                }
             }
 
-            return cost;
+            // End with the same node as the start
+            newPosition.Add(currentPosition[0]);
+
+            return newPosition;
         }
+
+
     }
 }

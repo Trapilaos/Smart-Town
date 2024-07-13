@@ -17,8 +17,8 @@ namespace API.Controllers
         [HttpGet("status")]
         public async Task<IActionResult> GetLightingStatus(string town)
         {
-            var (status, brightness) = await _smartLightingService.GetLightingStatusAsync(town);
-            return Ok(new { status, brightness });
+            var lightingStatus = await _smartLightingService.GetLightingStatusAsync(town);
+            return Ok(lightingStatus);
         }
     }
 }

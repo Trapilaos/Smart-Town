@@ -32,9 +32,13 @@ namespace API.Controllers
         }
 
         [HttpGet("optimalpath")]
-        public async Task<ActionResult<List<string>>> GetOptimalPath()
+        public async Task<ActionResult> GetOptimalPath()
         {
-            var optimalPath = await _wasteManagementService.GetOptimalPathAsync();
+            var (needsPath, optimalPath) = await _wasteManagementService.GetOptimalPathAsync();
+            if (!needsPath)
+            {
+                return Ok(new { message = "No need for optimal path, all bins are empty" });
+            }
             return Ok(optimalPath);
         }
     }

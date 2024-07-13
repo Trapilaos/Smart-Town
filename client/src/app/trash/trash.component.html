@@ -35,7 +35,8 @@
 
       <div class="col-md-6">
         <h4 class="mb-3">Optimal Collection Path</h4>
-        <div class="path-map">
+        <div *ngIf="statusMessage" class="alert alert-info">{{ statusMessage }}</div>
+        <div class="path-map" *ngIf="!statusMessage">
           <ng-container *ngFor="let location of optimalPath; let i = index">
             <div class="path-location" [ngClass]="{'path-start': i === 0, 'path-end': i === optimalPath.length - 1}">
               <span>{{ location }}</span>

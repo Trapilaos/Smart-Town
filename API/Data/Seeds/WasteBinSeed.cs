@@ -1,5 +1,3 @@
-
-
 namespace API.Data.Seeds
 {
     public static class WasteBinSeed
