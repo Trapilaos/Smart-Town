@@ -1,5 +1,5 @@
-body {
-    padding-top: 5rem;
+:host {
+    display: block;
 }
 
 .table>tbody>tr>td,

@@ -22,6 +22,15 @@
   justify-content: center;
   align-items: center;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  font-size: 1rem;
+}
+
+@media (max-width: 767px) {
+  .traffic-location {
+    width: 80px;
+    height: 80px;
+    font-size: 0.8rem;
+  }
 }
 
 .traffic-high {
@@ -39,10 +48,16 @@
   color: #fff;
 }
 
-.reservation-time {
-  font-weight: bold;
-}
-
+.reservation-time,
 .reservation-duration {
   font-weight: bold;
+  font-size: 1rem;
+}
+
+@media (max-width: 767px) {
+
+  .reservation-time,
+  .reservation-duration {
+    font-size: 0.8rem;
+  }
 }

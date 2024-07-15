@@ -1,7 +1,11 @@
+:host {
+  font-size: 1rem;
+}
+
 .waste-bin-card {
   cursor: pointer;
-  transition: transform .2s;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s;
+  box-shadow: 0 0.4rem 0.6rem rgba(0, 0, 0, 0.1);
 }
 
 .waste-bin-card:hover {
@@ -9,11 +13,11 @@
 }
 
 .glass-container {
-  width: 50px;
-  height: 150px;
-  border: 1px solid #ccc;
+  width: 5rem;
+  height: 15rem;
+  border: 0.1rem solid #ccc;
   position: relative;
-  margin-bottom: 10px;
+  margin-bottom: 1rem;
 }
 
 .fill {
@@ -21,7 +25,7 @@
   width: 100%;
   position: absolute;
   bottom: 0;
-  transition: height .2s;
+  transition: height 0.2s;
 }
 
 .path-map {
@@ -32,38 +36,45 @@
 
 .path-location {
   background-color: #fff;
-  border: 1px solid #ccc;
-  padding: 10px 20px;
-  margin-right: 10px;
+  border: 0.1rem solid #ccc;
+  padding: 1rem 2rem;
+  margin-right: 1rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 0.4rem 0.6rem rgba(0, 0, 0, 0.1);
   position: relative;
+  font-size: 1rem;
+}
+
+@media (max-width: 767px) {
+  .path-location {
+    font-size: 0.8rem;
+  }
 }
 
 .path-location:after {
   content: "";
   position: absolute;
   top: 50%;
-  right: -5px;
+  right: -0.5rem;
   width: 0;
   height: 0;
-  border-top: 5px solid transparent;
-  border-bottom: 5px solid transparent;
-  border-left: 5px solid #ccc;
+  border-top: 0.5rem solid transparent;
+  border-bottom: 0.5rem solid transparent;
+  border-left: 0.5rem solid #ccc;
 }
 
 .path-location:before {
   content: "";
   position: absolute;
   top: 50%;
-  right: -4px;
+  right: -0.4rem;
   width: 0;
   height: 0;
-  border-top: 6px solid transparent;
-  border-bottom: 6px solid transparent;
-  border-left: 6px solid #fff;
+  border-top: 0.6rem solid transparent;
+  border-bottom: 0.6rem solid transparent;
+  border-left: 0.6rem solid #fff;
 }
 
 .path-start:before,
@@ -72,21 +83,20 @@
 }
 
 .path-start {
-  border-top-left-radius: 5px;
-  border-bottom-left-radius: 5px;
+  border-top-left-radius: 0.5rem;
+  border-bottom-left-radius: 0.5rem;
 }
 
 .path-end {
-  border-top-right-radius: 5px;
-  border-bottom-right-radius: 5px;
+  border-top-right-radius: 0.5rem;
+  border-bottom-right-radius: 0.5rem;
 }
 
 .path-location span {
-  margin-right: 5px;
+  margin-right: 0.5rem;
 }
 
 .path-location i {
-  font-size: 14px;
-  margin-left: 5px;
+  font-size: 1.4rem;
+  margin-left: 0.5rem;
 }
-

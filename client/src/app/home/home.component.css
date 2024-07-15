@@ -1,10 +1,25 @@
 .container-fluid {
-    padding: 0 50px;
+    padding: 0 1rem;
+    /* Reduced padding for better mobile display */
 }
 
 h1 {
-    font-size: 3rem;
+    font-size: 2rem;
+    /* Reduced font size for better mobile display */
     margin-bottom: 1rem;
+}
+
+/* Added media queries for responsive design */
+@media (min-width: 768px) {
+    h1 {
+        font-size: 2.5rem;
+    }
+}
+
+@media (min-width: 992px) {
+    h1 {
+        font-size: 3rem;
+    }
 }
 
 .btn-primary {
@@ -49,9 +64,21 @@ h1 {
 }
 
 .carousel-item img {
-    height: 400px;
-    width: 800px;
+    height: auto;
+    width: 100%;
     object-fit: cover;
+}
+
+@media (min-width: 768px) {
+    .carousel-item img {
+        height: 400px;
+    }
+}
+
+@media (min-width: 992px) {
+    .carousel-item img {
+        height: 500px;
+    }
 }
 
 .carousel-indicators [data-bs-slide-to] {

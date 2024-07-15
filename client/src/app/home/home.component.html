@@ -6,24 +6,11 @@
                 <p class="lead">A Smarter Way for your Town!</p>
             </div>
             <div id="carouselExampleIndicators" class="carousel slide" data-bs-ride="carousel">
-                <div class="carousel-indicators">
-                    <button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to="0"
-                        class="active" aria-current="true" aria-label="Slide 1">
-                        <i class="fas fa-circle"></i>
-                    </button>
-                    <button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to="1"
-                        aria-label="Slide 2">
-                        <i class="fas fa-circle"></i>
-                    </button>
-                    <button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to="2"
-                        aria-label="Slide 3">
-                        <i class="fas fa-circle"></i>
-                    </button>
-                </div>
+                <!-- Added loading="lazy" attribute to images for lazy loading -->
                 <div class="carousel-inner">
                     <div class="carousel-item active animate__animated animate__fadeIn">
                         <img src="https://s.hdnux.com/photos/01/31/44/67/23481822/8/rawImage.jpg" class="d-block w-100"
-                            alt="Traffic Management System">
+                            alt="Traffic Management System" loading="lazy">
                         <div class="carousel-caption d-none d-md-block">
                             <h5>Traffic Management System</h5>
                             <p>Optimize traffic flow, monitor and manage parking spaces, and improve overall traffic
@@ -32,7 +19,7 @@
                     </div>
                     <div class="carousel-item animate__animated animate__fadeInLeft">
                         <img src="https://www.photos-public-domain.com/wp-content/uploads/2011/03/garbage-cans-overflowing.jpg"
-                            class="d-block w-100" alt="Waste Management System">
+                            class="d-block w-100" alt="Waste Management System" loading="lazy">
                         <div class="carousel-caption d-none d-md-block">
                             <h5>Waste Management System</h5>
                             <p>Monitor waste collection routes, optimize schedules, and monitor bin levels.</p>
@@ -40,7 +27,7 @@
                     </div>
                     <div class="carousel-item animate__animated animate__fadeInRight">
                         <img src="https://assets.the-atlas.com/project_images/9b24309ab43599b57aaa5cc7a445213a-sk1a7168_v3_dh.jpg"
-                            class="d-block w-100" alt="Smart Lighting">
+                            class="d-block w-100" alt="Smart Lighting" loading="lazy">
                         <div class="carousel-caption d-none d-md-block">
                             <h5>Smart Lighting</h5>
                             <p>Implement energy-efficient and remotely controlled lighting solutions for public spaces.
@@ -78,4 +65,3 @@
             <app-register (cancelRegister)="cancelRegisterMode($event)"></app-register>
         </div>
     </div>
-</div>

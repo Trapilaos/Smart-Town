@@ -10,7 +10,8 @@
             <span class="sr-only">Loading...</span>
           </div>
           <p *ngIf="statusMessage !== 'Checking...'">
-            <i class="fas" [ngClass]="{'fa-lightbulb-slash': lightingStatus === 'Lights Off', 'fa-lightbulb': lightingStatus === 'Lights On'}"></i>
+            <i class="fas"
+              [ngClass]="{'fa-lightbulb-slash': lightingStatus === 'Lights Off', 'fa-lightbulb': lightingStatus === 'Lights On'}"></i>
             <strong>Lighting Status:</strong> {{ statusMessage }}
           </p>
           <p *ngIf="brightnessLevel && lightingStatus === 'Lights On'">

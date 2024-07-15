@@ -1,7 +1,7 @@
 <div class="container mt-5">
     <h2 class="text-center mb-4">Create Event</h2>
 
-    <form (ngSubmit)="createEvent()" class="mx-auto" style="max-width: 600px;">
+    <form (ngSubmit)="createEvent()" class="mx-auto event-form" novalidate>
         <div class="mb-3">
             <label for="title" class="form-label">Title</label>
             <input type="text" class="form-control" id="title" [(ngModel)]="model.title" name="title" required>

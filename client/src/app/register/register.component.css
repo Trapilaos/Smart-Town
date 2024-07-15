@@ -1,0 +1,9 @@
+.register-heading {
+    font-size: 2rem;
+}
+
+@media (max-width: 767px) {
+    .register-heading {
+        font-size: 1.5rem;
+    }
+}

@@ -19,7 +19,8 @@
           <div class="card-body">
             <h5 class="card-title">{{ space.name }}</h5>
             <p class="card-text">{{ space.currentVehicles }}/{{ space.maxVehicles }}</p>
-            <button class="btn btn-primary btn-block" (click)="selectParkingSpace(space)" [disabled]="space.currentVehicles >= space.maxVehicles">
+            <button class="btn btn-primary btn-block" (click)="selectParkingSpace(space)"
+              [disabled]="space.currentVehicles >= space.maxVehicles">
               <i class="fas fa-parking"></i> Reserve
             </button>
             <div class="invalid-feedback" *ngIf="selectedParkingSpaceId === space.id && reservationMessage">
@@ -27,7 +28,7 @@
             </div>
             <div class="mt-2" *ngIf="selectedParkingSpaceId === space.id">
               <p><strong>Reservation Time:</strong> {{ reservationTime | date:'shortTime' }}</p>
-              <p><strong>Duration:</strong> 
+              <p><strong>Duration:</strong>
                 <select class="form-select" [(ngModel)]="reservationDuration">
                   <option [ngValue]="null">Select Duration</option>
                   <option [ngValue]="30">30 minutes</option>

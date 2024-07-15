@@ -1,0 +1,11 @@
+.card-header-title {
+    font-size: 1.5rem;
+
+}
+
+@media (max-width: 767px) {
+    .card-header-title {
+        font-size: 1.25rem;
+
+    }
+}

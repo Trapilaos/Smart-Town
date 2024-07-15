@@ -1,14 +1,22 @@
 <nav class="navbar navbar-expand-lg navbar-dark fixed-top bg-primary" data-bs-theme="dark">
   <div class="container">
-    <a class="navbar-brand fs-4" routerLink="/" routerLinkActive="active">Smart-Town</a>
+    <a class="navbar-brand navbar-brand-custom" routerLink="/" routerLinkActive="active">Smart-Town</a>
+
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse"
+      aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
 
     <div class="collapse navbar-collapse" id="navbarCollapse">
       <ul class="navbar-nav me-auto mb-2 mb-md-0">
         <ng-container *ngIf="(accountService.currentUser$ | async) as user">
           <ng-container *ngIf="user.roles.includes('Admin'); else userLinks">
-            <li class="nav-item"><a class="nav-link" routerLink="/admin" routerLinkActive="active">Admin Dashboard</a></li>
-            <li class="nav-item"><a class="nav-link" routerLink="/admin/create-event" routerLinkActive="active">Create Event</a></li>
-            <li class="nav-item"><a class="nav-link" routerLink="/admin/user-management" routerLinkActive="active">Manage Users</a></li>
+            <li class="nav-item"><a class="nav-link" routerLink="/admin" routerLinkActive="active">Admin Dashboard</a>
+            </li>
+            <li class="nav-item"><a class="nav-link" routerLink="/admin/create-event" routerLinkActive="active">Create
+                Event</a></li>
+            <li class="nav-item"><a class="nav-link" routerLink="/admin/user-management"
+                routerLinkActive="active">Manage Users</a></li>
           </ng-container>
           <ng-template #userLinks>
             <li class="nav-item"><a class="nav-link" routerLink="/member" routerLinkActive="active">Community</a></li>

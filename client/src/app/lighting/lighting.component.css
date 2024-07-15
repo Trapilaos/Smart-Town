@@ -1,10 +1,9 @@
-/* src/app/lighting/lighting.component.css */
 .container {
-  padding-top: 100px;
+  padding-top: 50px;
 }
 
 .card {
-  background-color: #f8f9fa; /* Light background color for contrast */
+  background-color: #f8f9fa;
 }
 
 .card-header {
@@ -28,4 +27,16 @@ p {
 .bi {
   font-size: 2rem;
   margin-right: 0.5rem;
+}
+
+@media (min-width: 768px) {
+  .card-header {
+    font-size: 2rem;
+  }
+}
+
+@media (min-width: 992px) {
+  .card-header {
+    font-size: 2.5rem;
+  }
 }
