@@ -14,6 +14,11 @@ namespace API.Services
             _context = context;
         }
 
+        /// <summary>
+        /// Processes a payment for an invoice.
+        /// </summary>
+        /// <param name="paymentDTO">The payment details.</param>
+        /// <returns>The updated invoice if the payment was successful, null otherwise.</returns>
         public async Task<Invoice> ProcessPayment(PaymentDTO paymentDTO)
         {
             var invoice = await _context.Invoices.FirstOrDefaultAsync(i => i.InvoiceNumber == paymentDTO.InvoiceNumber && i.UserId == paymentDTO.UserId && !i.IsPaid);
@@ -28,6 +33,13 @@ namespace API.Services
             return invoice;
         }
 
+        /// <summary>
+        /// Checks the status of an invoice.
+        /// </summary>
+        /// <param name="invoiceNumber">The invoice number.</param>
+        /// <param name="userId">The user's ID.</param>
+        /// <returns>The invoice if found and not paid, otherwise throws an exception.</returns>
+        /// <exception cref="InvalidOperationException">Thrown when the invoice is not found or already paid.</exception>
         public async Task<Invoice> CheckInvoice(string invoiceNumber, string userId)
         {
             var invoice = await _context.Invoices.FirstOrDefaultAsync(i => i.InvoiceNumber == invoiceNumber && i.UserId == userId);

@@ -13,5 +13,23 @@ body {
 }
 
 .fa-3x {
+  
     margin-bottom: 1rem;
 }
+
+.event-card {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+  
+  .event-photo {
+    height: 200px;
+    object-fit: cover;
+  }
+  
+  .event-list {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 20px;
+  }

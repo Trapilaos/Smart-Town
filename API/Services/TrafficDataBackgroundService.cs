@@ -13,18 +13,32 @@ namespace API.Services
             _serviceScopeFactory = serviceScopeFactory;
         }
 
+        /// <summary>
+        /// Starts the background service.
+        /// </summary>
+        /// <param name="cancellationToken">The cancellation token.</param>
+        /// <returns>A completed task.</returns>
         public Task StartAsync(CancellationToken cancellationToken)
         {
             _timer = new Timer(ExecuteAsync, null, TimeSpan.Zero, TimeSpan.FromDays(1));
             return Task.CompletedTask;
         }
 
+        /// <summary>
+        /// Stops the background service.
+        /// </summary>
+        /// <param name="cancellationToken">The cancellation token.</param>
+        /// <returns>A completed task.</returns>
         public Task StopAsync(CancellationToken cancellationToken)
         {
             _timer.Dispose();
             return Task.CompletedTask;
         }
 
+        /// <summary>
+        /// Executes the background service operation.
+        /// </summary>
+        /// <param name="state">The state object (not used).</param>
         private async void ExecuteAsync(object state)
         {
             using var scope = _serviceScopeFactory.CreateScope();

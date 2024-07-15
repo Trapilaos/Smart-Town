@@ -23,4 +23,22 @@
       </div>
     </div>
   </div>
+
+  <div class="row mt-5">
+    <div class="col-12">
+      <h3 class="text-center mb-4">Manage Events</h3>
+      <div class="event-list">
+        <div class="event-card card mb-4" *ngFor="let event of events">
+          <div class="card-body">
+            <h5 class="event-title card-title">{{ event.title }}</h5>
+            <img class="event-photo card-img-top mb-3" [src]="event.photoUrl" alt="{{ event.title }}">
+            <p class="event-description card-text">{{ event.description }}</p>
+            <button class="event-button btn btn-danger" (click)="deleteEvent(event.id)">
+              <i class="fas fa-trash"></i> Delete
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>

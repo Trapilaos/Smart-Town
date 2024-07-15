@@ -1,7 +1,6 @@
 using API.Entities;
 using Microsoft.EntityFrameworkCore;
 
-
 namespace API.Data
 {
     public class WasteBinDataGenerator
@@ -17,12 +16,19 @@ namespace API.Data
             _context = context;
         }
 
+        /// <summary>
+        /// Cleans the existing waste bin data and generates new data for the specified number of days.
+        /// </summary>
+        /// <param name="numDays">The number of days to generate data for.</param>
         public async Task CleanAndGenerateDataAsync(int numDays)
         {
             await CleanDataAsync();
             await GenerateDataAsync(numDays);
         }
 
+        /// <summary>
+        /// Cleans the existing waste bin data from the database.
+        /// </summary>
         private async Task CleanDataAsync()
         {
             var wasteBins = await _context.WasteBins.ToListAsync();
@@ -30,6 +36,10 @@ namespace API.Data
             await _context.SaveChangesAsync();
         }
 
+        /// <summary>
+        /// Generates waste bin data for the specified number of days.
+        /// </summary>
+        /// <param name="numDays">The number of days to generate data for.</param>
         private async Task GenerateDataAsync(int numDays)
         {
             var bins = new List<WasteBin>();
@@ -73,6 +83,10 @@ namespace API.Data
             await _context.SaveChangesAsync();
         }
 
+        /// <summary>
+        /// Calculates the fill level based on the hour of the day.
+        /// </summary>
+        /// <param name="hour">The hour of the day.</param>
         private int GetFillLevel(int hour)
         {
             // Assume that the bins tend to fill up more during the day and less at night.
@@ -89,6 +103,5 @@ namespace API.Data
                 return baseFillLevel - nightFillDecrease;
             }
         }
-
     }
 }

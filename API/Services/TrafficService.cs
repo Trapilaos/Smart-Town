@@ -14,7 +14,10 @@ namespace API.Services
             _context = context;
         }
 
-        // Gets the current traffic data for the current hour
+        /// <summary>
+        /// Gets the current traffic data for the current hour.
+        /// </summary>
+        /// <returns>A list of traffic data for the current hour.</returns>
         public async Task<List<TrafficData>> GetCurrentTrafficDataAsync()
         {
             var now = DateTime.Now;
@@ -23,7 +26,10 @@ namespace API.Services
                 .ToListAsync();
         }
 
-        // Gets the traffic data for the street with the highest traffic flow
+        /// <summary>
+        /// Gets the traffic data for the street with the highest traffic flow.
+        /// </summary>
+        /// <returns>The traffic data for the most crowded street.</returns>
         public async Task<TrafficData> GetMostCrowdedStreetAsync()
         {
             return await _context.TrafficData
@@ -31,7 +37,9 @@ namespace API.Services
                 .FirstOrDefaultAsync();
         }
 
-        // Updates the traffic data by generating new data and clearing old data
+        /// <summary>
+        /// Updates the traffic data by generating new data and clearing old data.
+        /// </summary>
         public async Task UpdateTrafficDataAsync()
         {
             var newTrafficData = TrafficDataGenerator.GenerateTrafficData();
@@ -40,13 +48,18 @@ namespace API.Services
             await _context.SaveChangesAsync();
         }
 
-        // Retrieves all traffic data from the database
+        /// <summary>
+        /// Retrieves all traffic data from the database.
+        /// </summary>
+        /// <returns>A list of all traffic data.</returns>
         public async Task<List<TrafficData>> GetTrafficDataAsync()
         {
             return await _context.TrafficData.ToListAsync();
         }
 
-        // Clears old traffic data that is older than one day
+        /// <summary>
+        /// Clears old traffic data that is older than one day.
+        /// </summary>
         private async Task ClearOldTrafficDataAsync()
         {
             var oldData = _context.TrafficData

@@ -3,11 +3,13 @@ using API.DTOs;
 using API.Entities;
 using API.Interfaces;
 using AutoMapper;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace API.Services
 {
+    /// <summary>
+    /// Service for managing waste bins and optimizing waste collection routes.
+    /// </summary>
     public class WasteManagementService : IWasteManagementService
     {
         private readonly DataContext _context;
@@ -23,14 +25,21 @@ namespace API.Services
             _distances = CreateDistances();
         }
 
-        // Get all waste bins
+        /// <summary>
+        /// Gets all waste bins.
+        /// </summary>
+        /// <returns>List of waste bin DTOs.</returns>
         public async Task<List<WasteBinDTO>> GetWasteBinsAsync()
         {
             var wasteBins = await _context.WasteBins.ToListAsync();
             return _mapper.Map<List<WasteBinDTO>>(wasteBins);
         }
 
-        // Update a waste bin
+        /// <summary>
+        /// Updates a waste bin's details.
+        /// </summary>
+        /// <param name="wasteBinDto">The waste bin DTO with updated details.</param>
+        /// <returns>The updated waste bin DTO.</returns>
         public async Task<WasteBinDTO> UpdateWasteBinAsync(WasteBinDTO wasteBinDto)
         {
             var wasteBin = await _context.WasteBins.FindAsync(wasteBinDto.Id);
@@ -43,7 +52,10 @@ namespace API.Services
             return _mapper.Map<WasteBinDTO>(wasteBin);
         }
 
-        // Get the optimal path for waste collection
+        /// <summary>
+        /// Gets the optimal path for waste collection using Particle Swarm Optimization (PSO).
+        /// </summary>
+        /// <returns>A tuple containing a boolean indicating if the path was found and the path itself.</returns>
         public async Task<(bool, List<string>)> GetOptimalPathAsync()
         {
             var wasteBins = await _context.WasteBins.ToListAsync();
@@ -64,7 +76,11 @@ namespace API.Services
 
             return (true, optimalPath);
         }
-        // Create a graph of the waste bin locations
+
+        /// <summary>
+        /// Creates a graph of the waste bin locations.
+        /// </summary>
+        /// <returns>A dictionary representing the graph.</returns>
         private Dictionary<string, List<string>> CreateGraph()
         {
             return new Dictionary<string, List<string>>
@@ -76,7 +92,10 @@ namespace API.Services
             };
         }
 
-        // Create a dictionary of distances between waste bin locations
+        /// <summary>
+        /// Creates a dictionary of distances between waste bin locations.
+        /// </summary>
+        /// <returns>A dictionary with distances between locations.</returns>
         private Dictionary<(string, string), int> CreateDistances()
         {
             return new Dictionary<(string, string), int>
@@ -96,7 +115,11 @@ namespace API.Services
             };
         }
 
-        // Get traffic flow data for each street
+        /// <summary>
+        /// Gets traffic flow data for each street.
+        /// </summary>
+        /// <param name="trafficData">List of traffic data.</param>
+        /// <returns>A dictionary with traffic flow for each street.</returns>
         private Dictionary<string, int> GetTrafficFlow(List<TrafficData> trafficData)
         {
             return new Dictionary<string, int>
@@ -108,7 +131,12 @@ namespace API.Services
             };
         }
 
-        // Get traffic flow for a specific street
+        /// <summary>
+        /// Gets traffic flow for a specific street.
+        /// </summary>
+        /// <param name="trafficData">List of traffic data.</param>
+        /// <param name="street">The street to get traffic flow for.</param>
+        /// <returns>Traffic flow for the street.</returns>
         private int GetTrafficFlowForStreet(List<TrafficData> trafficData, string street)
         {
             return trafficData
@@ -117,7 +145,13 @@ namespace API.Services
                 .FirstOrDefault()?.TrafficFlow ?? 0;
         }
 
-        // Implement the Particle Swarm Optimization algorithm to find the optimal path
+        /// <summary>
+        /// Implements the Particle Swarm Optimization (PSO) algorithm to find the optimal path.
+        /// </summary>
+        /// <param name="start">The start location.</param>
+        /// <param name="wasteBins">List of waste bins.</param>
+        /// <param name="trafficFlow">Traffic flow data.</param>
+        /// <returns>List of locations representing the optimal path.</returns>
         public List<string> PSOAlgorithm(string start, List<WasteBin> wasteBins, Dictionary<string, int> trafficFlow)
         {
             int numParticles = 30;
@@ -130,7 +164,7 @@ namespace API.Services
             {
                 foreach (var particle in particles)
                 {
-                    particle.UpdatePosition(GenerateNewPosition(particle.Position, wasteBins)); // Corrected argument here
+                    particle.UpdatePosition(GenerateNewPosition(particle.Position, wasteBins));
                     if (particle.BestCost < bestParticle.BestCost)
                     {
                         bestParticle = particle;
@@ -141,8 +175,14 @@ namespace API.Services
             return bestParticle.BestPosition;
         }
 
-
-        // Initialize particles for the PSO algorithm
+        /// <summary>
+        /// Initializes particles for the PSO algorithm.
+        /// </summary>
+        /// <param name="start">The start location.</param>
+        /// <param name="nodes">List of nodes (locations).</param>
+        /// <param name="numParticles">Number of particles.</param>
+        /// <param name="trafficFlow">Traffic flow data.</param>
+        /// <returns>List of initialized particles.</returns>
         private List<Particle> InitializeParticles(string start, List<string> nodes, int numParticles, Dictionary<string, int> trafficFlow)
         {
             var particles = new List<Particle>();
@@ -173,7 +213,12 @@ namespace API.Services
             return particles;
         }
 
-        // Generate a new position for a particle in the PSO algorithm
+        /// <summary>
+        /// Generates a new position for a particle in the PSO algorithm.
+        /// </summary>
+        /// <param name="currentPosition">The current position of the particle.</param>
+        /// <param name="wasteBins">List of waste bins.</param>
+        /// <returns>A new position for the particle.</returns>
         private List<string> GenerateNewPosition(List<string> currentPosition, List<WasteBin> wasteBins)
         {
             var newPosition = new List<string>();
@@ -223,7 +268,5 @@ namespace API.Services
 
             return newPosition;
         }
-
-
     }
 }

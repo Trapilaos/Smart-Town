@@ -8,7 +8,7 @@ import { Comment } from '../_models/comment.model';
   providedIn: 'root'
 })
 export class CommentService {
-  private apiUrl = environment.apiUrl + 'comments';
+  private apiUrl = `${environment.apiUrl}comments`;
 
   constructor(private http: HttpClient) {}
 

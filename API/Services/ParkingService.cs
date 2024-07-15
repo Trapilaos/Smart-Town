@@ -14,6 +14,10 @@ namespace API.Services
             _context = context;
         }
 
+        /// <summary>
+        /// Retrieves all parking spaces and cleans up old reservations.
+        /// </summary>
+        /// <returns>A list of parking spaces.</returns>
         public async Task<List<ParkingSpace>> GetParkingSpacesAsync()
         {
             // Clean up old reservations
@@ -22,6 +26,14 @@ namespace API.Services
             return await _context.ParkingSpaces.ToListAsync();
         }
 
+        /// <summary>
+        /// Reserves a parking space for a user.
+        /// </summary>
+        /// <param name="userId">The user's ID.</param>
+        /// <param name="parkingSpaceId">The parking space's ID.</param>
+        /// <param name="reservationTime">The reservation time.</param>
+        /// <param name="duration">The reservation duration in minutes.</param>
+        /// <returns>True if the reservation was successful, false otherwise.</returns>
         public async Task<bool> ReserveParkingSpaceAsync(string userId, int parkingSpaceId, DateTime reservationTime, int duration)
         {
             var parkingSpace = await _context.ParkingSpaces.FindAsync(parkingSpaceId);
@@ -60,6 +72,9 @@ namespace API.Services
             return true;
         }
 
+        /// <summary>
+        /// Cleans up expired reservations and decrements the current vehicles in the parking spaces.
+        /// </summary>
         private async Task CleanUpReservationsAsync()
         {
             var expiredReservations = await _context.Reservations
@@ -80,6 +95,11 @@ namespace API.Services
             await _context.SaveChangesAsync();
         }
 
+        /// <summary>
+        /// Decrements the current vehicles in a parking space after the reservation duration.
+        /// </summary>
+        /// <param name="parkingSpaceId">The parking space's ID.</param>
+        /// <param name="duration">The reservation duration in minutes.</param>
         private async Task DecrementVehicleAfterDuration(int parkingSpaceId, int duration)
         {
             // Wait for the duration time in milliseconds

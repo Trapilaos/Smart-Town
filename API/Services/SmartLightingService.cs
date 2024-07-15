@@ -1,7 +1,6 @@
 using API.DTOs;
 using API.Entities;
 using Newtonsoft.Json.Linq;
-using System;
 
 namespace API.Services
 {
@@ -18,6 +17,11 @@ namespace API.Services
             _logger = logger;
         }
 
+        /// <summary>
+        /// Gets the lighting status for a specified town.
+        /// </summary>
+        /// <param name="town">The name of the town.</param>
+        /// <returns>The lighting status DTO.</returns>
         public async Task<LightingStatusDTO> GetLightingStatusAsync(string town)
         {
             var apiKey = _configuration["WeatherApi:ApiKey"];
@@ -67,6 +71,14 @@ namespace API.Services
             return lightingStatusDTO;
         }
 
+        /// <summary>
+        /// Gets the brightness level based on the current date and time, sunset and sunrise times, and weather condition.
+        /// </summary>
+        /// <param name="currentDateTime">The current date and time.</param>
+        /// <param name="sunsetDateTime">The sunset time.</param>
+        /// <param name="sunriseDateTime">The sunrise time.</param>
+        /// <param name="condition">The weather condition.</param>
+        /// <returns>The brightness level as an integer.</returns>
         private int GetBrightnessLevel(DateTime currentDateTime, DateTime sunsetDateTime, DateTime sunriseDateTime, string condition)
         {
             if (IsWeatherMoody(condition))
@@ -93,7 +105,11 @@ namespace API.Services
             return 0; // Daytime, lights off
         }
 
-
+        /// <summary>
+        /// Checks if the weather condition is considered moody.
+        /// </summary>
+        /// <param name="condition">The weather condition.</param>
+        /// <returns>True if the condition is moody, false otherwise.</returns>
         private bool IsWeatherMoody(string condition)
         {
             var moodyConditions = new List<string> { "cloudy", "overcast", "rain", "fog", "mist", "drizzle" };

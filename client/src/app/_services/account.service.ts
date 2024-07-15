@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject, map } from 'rxjs';
 import { User } from '../_models/user';
 import { HttpClient } from '@angular/common/http';
-import { environment } from 'src/environments/environment.development';
+import { environment } from 'src/environments/environment';
 
 @Injectable({
   providedIn: 'root'
@@ -15,19 +15,18 @@ export class AccountService {
   constructor(private http: HttpClient) { }
 
   login(model: any) {
-    return this.http.post<User>(this.baseUrl + 'account/login', model).pipe(
+    return this.http.post<User>(`${this.baseUrl}account/login`, model).pipe(
       map((response: User) => {
-        const user = response;
-        if (user) {
-          this.setCurrentUser(user);
+        if (response) {
+          this.setCurrentUser(response);
         }
-        return user;
+        return response;
       })
     );
   }
 
   register(model: any) {
-    return this.http.post<User>(this.baseUrl + 'account/register', model).pipe(
+    return this.http.post<User>(`${this.baseUrl}account/register`, model).pipe(
       map((user: User) => {
         if (user) {
           this.setCurrentUser(user);
@@ -38,18 +37,19 @@ export class AccountService {
   }
 
   getUserById(userId: number) {
-    return this.http.get<User>(this.baseUrl + 'account/' + userId);
+    return this.http.get<User>(`${this.baseUrl}account/${userId}`);
   }
 
   setCurrentUser(user: User) {
-    const roles = this.getDecodedToken(user.token).role;
-    user.roles = Array.isArray(roles) ? roles : [roles];
+    const decodedToken = this.getDecodedToken(user.token);
+    user.roles = Array.isArray(decodedToken.role) ? decodedToken.role : [decodedToken.role];
     localStorage.setItem('user', JSON.stringify(user));
     this.currentUserSource.next(user);
   }
 
   getDecodedToken(token: string) {
-    return JSON.parse(atob(token.split('.')[1]));
+    const parts = token.split('.');
+    return JSON.parse(atob(parts[1]));
   }
 
   logout() {
