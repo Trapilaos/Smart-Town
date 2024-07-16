@@ -41,4 +41,21 @@
       </div>
     </div>
   </div>
+
+  <div class="row mt-5">
+    <div class="col-12">
+      <h3 class="text-center mb-4">Manage Comments</h3>
+      <div class="comment-list">
+        <div class="comment-card card mb-4" *ngFor="let comment of comments">
+          <div class="card-body">
+            <p class="comment-content card-text">{{ comment.content }}</p>
+            <small class="comment-date">{{ comment.date | date }}</small>
+            <button class="comment-button btn btn-warning" (click)="markCommentAsSeen(comment.id)">
+              <i class="fas fa-check"></i> Mark as Done
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>

@@ -19,13 +19,20 @@ export class MemberComponent implements OnInit {
     private eventService: EventService,
     private commentService: CommentService,
     private toastr: ToastrService
-  ) {}
+  ) { }
 
   ngOnInit(): void {
+    this.loadEvents();
+    this.loadComments();
+  }
+
+  loadEvents(): void {
     this.eventService.getEvents().subscribe((data) => {
       this.events = data;
     });
+  }
 
+  loadComments(): void {
     this.commentService.getComments().subscribe((data) => {
       this.comments = data;
     });
@@ -41,15 +48,15 @@ export class MemberComponent implements OnInit {
     const newComment: Comment = {
       id: 0,
       content: this.newCommentContent,
-      userId: 'currentUserId', 
-      date: new Date()
+      userId: 'currentUserId',
+      date: new Date(),
+      seen: false // Make sure seen is set to false
     };
 
-    this.commentService.addComment(newComment).subscribe((comment) => {
-      this.comments.push(comment);
+    this.commentService.addComment(newComment).subscribe(() => {
+      this.loadComments(); // Refresh comments after adding new one
       this.newCommentContent = '';
       this.toastr.success('Comment added successfully!');
     });
   }
-
 }

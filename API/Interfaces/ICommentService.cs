@@ -6,5 +6,6 @@ namespace API.Interfaces
     {
         Task<Comment> AddCommentAsync(Comment newComment);
         Task<IEnumerable<Comment>> GetCommentsAsync();
+        Task<Comment> MarkCommentAsSeenAsync(int commentId); // Add this method
     }
 }

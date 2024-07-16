@@ -36,10 +36,6 @@ export class AccountService {
     );
   }
 
-  getUserById(userId: number) {
-    return this.http.get<User>(`${this.baseUrl}account/${userId}`);
-  }
-
   setCurrentUser(user: User) {
     const decodedToken = this.getDecodedToken(user.token);
     user.roles = Array.isArray(decodedToken.role) ? decodedToken.role : [decodedToken.role];

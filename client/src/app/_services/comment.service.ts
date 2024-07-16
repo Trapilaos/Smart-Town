@@ -19,4 +19,8 @@ export class CommentService {
   addComment(comment: Comment): Observable<Comment> {
     return this.http.post<Comment>(this.apiUrl, comment);
   }
+
+  markCommentAsSeen(commentId: number): Observable<Comment> {
+    return this.http.post<Comment>(`${this.apiUrl}/${commentId}/mark-seen`, {});
+  }
 }

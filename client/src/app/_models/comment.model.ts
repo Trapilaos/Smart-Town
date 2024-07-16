@@ -3,5 +3,5 @@ export interface Comment {
     content: string;
     userId: string;
     date: Date;
+    seen?: boolean;
 }
-  

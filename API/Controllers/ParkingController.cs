@@ -37,23 +37,39 @@ namespace API.Controllers
         [HttpPost("reserve")]
         public async Task<ActionResult> ReserveParkingSpace([FromBody] Reservation reservation)
         {
-            // Get the user ID from the authenticated user's claim
+            var userId = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+            if (userId == null)
+            {
+                return Unauthorized(new { message = "User not authorized" });
+            }
+
+            reservation.ReservationTime = reservation.ReservationTime.ToUniversalTime();
+            var (success, startTime, endTime) = await _parkingService.ReserveParkingSpaceAsync(userId, reservation.ParkingSpaceId, reservation.ReservationTime, reservation.Duration);
+
+            if (!success)
+            {
+                return BadRequest(new { message = "Failed to reserve parking space" });
+            }
+
+            return Ok(new { message = "Parking space reserved successfully", startTime, endTime });
+        }
+        
+        [HttpGet("active-reservation")]
+        public async Task<ActionResult<Reservation>> GetActiveReservation()
+        {
             var userId = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
             if (userId == null)
             {
                 return Unauthorized();
             }
 
-            // Convert the reservation time to UTC
-            reservation.ReservationTime = reservation.ReservationTime.ToUniversalTime();
-            // Reserve the parking space and return a success message if the reservation was successful
-            var success = await _parkingService.ReserveParkingSpaceAsync(userId, reservation.ParkingSpaceId, reservation.ReservationTime, reservation.Duration);
-            if (!success)
+            var reservation = await _parkingService.GetActiveReservationAsync(userId);
+            if (reservation == null)
             {
-                return BadRequest("Failed to reserve parking space");
+                return NotFound();
             }
 
-            return Ok("Parking space reserved successfully");
+            return Ok(reservation);
         }
     }
 }

@@ -1,8 +1,8 @@
-import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
+import { BehaviorSubject, of, switchMap } from 'rxjs';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { environment } from 'src/environments/environment.development';
 import { Member } from '../_models/member';
-import { BehaviorSubject, of, switchMap, tap } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
@@ -29,19 +29,18 @@ export class MembersService {
   }
 
   getMemberByUsername(username: string) {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')!).token : '';
     const httpOptions = {
       headers: new HttpHeaders({
         Authorization: `Bearer ${token}`
       })
     };
-  
-    return this.http.get<Member>(this.baseUrl + 'users/' + username, httpOptions).pipe(
+
+    return this.http.get<Member>(`${this.baseUrl}users/${username}`, httpOptions).pipe(
       switchMap(user => {
         this.setCurrentUser(user);
         return of(user);
       })
     );
   }
-  
 }

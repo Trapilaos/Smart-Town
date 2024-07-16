@@ -15,12 +15,22 @@
     <div class="row">
       <div class="col-md-6">
         <h4 class="mb-3">Reserve Parking Spaces</h4>
-        <div class="card reserve-card mb-3" *ngFor="let space of parkingSpaces">
+        <div *ngIf="activeReservation" class="card mb-3">
+          <div class="card-body">
+            <h5 class="card-title">Active Reservation</h5>
+            <p class="card-text">
+              <strong>Parking Space ID:</strong> {{ activeReservation.parkingSpaceId }}<br>
+              <strong>Start Time:</strong> {{ activeReservation.reservationTime | date:'shortTime' }}<br>
+              <strong>End Time:</strong> {{ getEndTime(activeReservation) | date:'shortTime' }}
+            </p>
+          </div>
+        </div>
+        <div class="card reserve-card mb-3" *ngFor="let space of parkingSpaces; trackBy: trackByFn">
           <div class="card-body">
             <h5 class="card-title">{{ space.name }}</h5>
             <p class="card-text">{{ space.currentVehicles }}/{{ space.maxVehicles }}</p>
             <button class="btn btn-primary btn-block" (click)="selectParkingSpace(space)"
-              [disabled]="space.currentVehicles >= space.maxVehicles">
+              [disabled]="space.currentVehicles >= space.maxVehicles || hasActiveReservation()">
               <i class="fas fa-parking"></i> Reserve
             </button>
             <div class="invalid-feedback" *ngIf="selectedParkingSpaceId === space.id && reservationMessage">

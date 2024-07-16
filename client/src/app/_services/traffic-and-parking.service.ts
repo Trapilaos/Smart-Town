@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { catchError, tap } from 'rxjs/operators';
 import { ParkingSpace } from '../_models/parking-space.model';
 import { TrafficData } from '../_models/traffic-data.model';
 import { Reservation } from '../_models/reservation.model';
@@ -28,8 +28,20 @@ export class TrafficAndParkingService {
     );
   }
 
-  reserveParkingSpace(reservation: Reservation): Observable<Reservation> {
-    return this.http.post<Reservation>(`${this.parkingUrl}/reserve`, reservation).pipe(
+  reserveParkingSpace(reservation: Reservation): Observable<any> {
+    return this.http.post(`${this.parkingUrl}/reserve`, reservation).pipe(
+      tap(response => {
+        console.log('API response:', response);
+      }),
+      catchError(this.handleError)
+    );
+  }
+
+  getActiveReservation(): Observable<Reservation> {
+    return this.http.get<Reservation>(`${this.parkingUrl}/active-reservation`).pipe(
+      tap(response => {
+        console.log('API response:', response);
+      }),
       catchError(this.handleError)
     );
   }

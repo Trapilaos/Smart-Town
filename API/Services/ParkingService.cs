@@ -34,42 +34,69 @@ namespace API.Services
         /// <param name="reservationTime">The reservation time.</param>
         /// <param name="duration">The reservation duration in minutes.</param>
         /// <returns>True if the reservation was successful, false otherwise.</returns>
-        public async Task<bool> ReserveParkingSpaceAsync(string userId, int parkingSpaceId, DateTime reservationTime, int duration)
+        public async Task<(bool Success, DateTime? StartTime, DateTime? EndTime)> ReserveParkingSpaceAsync(string userId, int parkingSpaceId, DateTime reservationTime, int duration)
         {
-            var parkingSpace = await _context.ParkingSpaces.FindAsync(parkingSpaceId);
-            if (parkingSpace == null || parkingSpace.CurrentVehicles >= parkingSpace.MaxVehicles)
+            try
             {
-                return false;
+                Console.WriteLine($"ReserveParkingSpaceAsync called with UserId={userId}, ParkingSpaceId={parkingSpaceId}, ReservationTime={reservationTime}, Duration={duration}");
+
+                var parkingSpace = await _context.ParkingSpaces.FindAsync(parkingSpaceId);
+                if (parkingSpace == null)
+                {
+                    Console.WriteLine("Parking space not found");
+                    return (false, null, null);
+                }
+
+                if (parkingSpace.CurrentVehicles >= parkingSpace.MaxVehicles)
+                {
+                    Console.WriteLine("Parking space is full");
+                    return (false, null, null);
+                }
+
+                var existingReservations = await _context.Reservations
+                    .Where(r => r.ParkingSpaceId == parkingSpaceId &&
+                                r.ReservationTime < reservationTime.AddMinutes(duration) && r.ReservationTime.AddMinutes(r.Duration) > reservationTime &&
+                                r.UserId == userId)
+                    .ToListAsync();
+
+                if (existingReservations.Any())
+                {
+                    Console.WriteLine("User already has an overlapping reservation");
+                    return (false, null, null);
+                }
+
+                var reservation = new Reservation
+                {
+                    UserId = userId,
+                    ParkingSpaceId = parkingSpaceId,
+                    ReservationTime = reservationTime,
+                    Duration = duration
+                };
+
+                parkingSpace.CurrentVehicles++;
+                _context.Reservations.Add(reservation);
+                await _context.SaveChangesAsync();
+
+                Console.WriteLine("Reservation made successfully");
+
+                _ = DecrementVehicleAfterDuration(parkingSpaceId, duration);
+
+                var endTime = reservationTime.AddMinutes(duration);
+                return (true, reservationTime, endTime);
             }
-
-            // Check for overlapping reservations
-            var existingReservations = await _context.Reservations
-                .Where(r => r.ParkingSpaceId == parkingSpaceId &&
-                            (r.ReservationTime < reservationTime && r.ReservationTime.AddMinutes(r.Duration) > reservationTime ||
-                             r.ReservationTime < reservationTime.AddMinutes(duration) && r.ReservationTime.AddMinutes(r.Duration) > reservationTime.AddMinutes(duration)))
-                .ToListAsync();
-
-            if (existingReservations.Any())
+            catch (Exception ex)
             {
-                return false;
+                Console.WriteLine($"Error in ReserveParkingSpaceAsync: {ex.Message}");
+                return (false, null, null);
             }
+        }
 
-            var reservation = new Reservation
-            {
-                UserId = userId,
-                ParkingSpaceId = parkingSpaceId,
-                ReservationTime = reservationTime,
-                Duration = duration
-            };
-
-            parkingSpace.CurrentVehicles++;
-            _context.Reservations.Add(reservation);
-            await _context.SaveChangesAsync();
-
-            // Schedule a task to decrement vehicles after the reservation duration
-            _ = DecrementVehicleAfterDuration(parkingSpaceId, duration);
-
-            return true;
+        public async Task<Reservation> GetActiveReservationAsync(string userId)
+        {
+            return await _context.Reservations
+                .Where(r => r.UserId == userId && r.ReservationTime.AddMinutes(r.Duration) > DateTime.UtcNow)
+                .OrderBy(r => r.ReservationTime)
+                .FirstOrDefaultAsync();
         }
 
         /// <summary>
