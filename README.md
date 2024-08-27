@@ -1,0 +1,2 @@
+A 'Smart City' platform designed to enhance citizen interaction with municipal services and optimize urban infrastructure through adaptive lighting, traffic and waste management, and digital event/payment systems. Built with a focus on scalability, flexibility, and maintainability, leveraging real-time data and a multi-layered architecture. 
+Developed during the 2023-2024 academic year under the guidance of Prof. Efthymios Alepis.
