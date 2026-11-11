@@ -4,6 +4,14 @@ import { Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import { User } from '../_models/user';
 
+/** Opens or closes the navbar on small screens by pressing Bootstrap's own toggler. */
+function setMenuOpen(open: boolean) {
+  const menu = document.getElementById('navbarCollapse');
+  if (menu && menu.classList.contains('show') !== open) {
+    (document.querySelector('.navbar-toggler') as HTMLElement | null)?.click();
+  }
+}
+
 @Component({
     selector: 'app-nav',
     templateUrl: './nav.component.html',
@@ -22,6 +30,10 @@ export class NavComponent implements OnInit {
 
   ngOnInit(): void {}
 
+  isAdmin(user: User): boolean {
+    return user.roles.includes('Admin');
+  }
+
   login() {
     this.accountService.login(this.model).subscribe({
       next: (user: User) => this.redirectUser(user),
@@ -34,8 +46,13 @@ export class NavComponent implements OnInit {
     this.router.navigateByUrl('/');
   }
 
+  /** Collapses the mobile menu after a link is chosen. */
+  closeMenu() {
+    setMenuOpen(false);
+  }
+
   redirectUser(user: User) {
-    if (user.roles.includes('Admin')) {
+    if (this.isAdmin(user)) {
       this.router.navigateByUrl('/admin');
     } else {
       this.router.navigateByUrl('/member');
