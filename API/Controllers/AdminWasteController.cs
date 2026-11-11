@@ -47,7 +47,7 @@ namespace API.Controllers
                 if (updated == null) return NotFound();
 
                 await _audit.RecordAsync(ActorId, ActorName, "waste.bin.update", "WasteBin", id.ToString(),
-                    $"{updated.Type} bin at {updated.Location}, fill {updated.FillPercent}%");
+                    FormattableString.Invariant($"{updated.Type} bin at {updated.Location}, fill {updated.FillPercent}%"));
                 return Ok(updated);
             }
             catch (DomainValidationException ex)

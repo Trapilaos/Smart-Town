@@ -46,7 +46,7 @@ namespace API.Controllers
             {
                 var created = await _invoices.CreateAsync(input);
                 await _audit.RecordAsync(ActorId, ActorName, "invoice.create", "Invoice", created.InvoiceNumber,
-                    $"{created.Amount:0.00} EUR for {created.PayerName}: {created.Description}");
+                    FormattableString.Invariant($"EUR {created.Amount:0.00} for {created.PayerName}: {created.Description}"));
                 return Ok(created);
             }
             catch (DomainValidationException ex)
