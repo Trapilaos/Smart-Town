@@ -1,5 +1,112 @@
 <div class="page">
-  <header class="page-header">
+  <header class="page-header no-print">
     <h1 class="page-title">New invoice</h1>
+    <p class="page-subtitle">Issue a bill. The payment code is shown once, so print the bill or write the code down before you leave.</p>
   </header>
+
+  @if (!created) {
+    <div class="row g-4 no-print">
+      <div class="col-lg-6">
+        <section class="card card-elevated">
+          <div class="card-body">
+            <form #invoiceForm="ngForm" novalidate (ngSubmit)="submit()">
+              <div class="mb-3">
+                <label for="payer-name" class="form-label">Payer name</label>
+                <input id="payer-name" name="payerName" type="text" class="form-control" maxlength="120" required
+                  [(ngModel)]="form.payerName">
+                <div class="form-text">Name of the person or organisation to bill. Invoices are paid by invoice number and code, so no account is needed.</div>
+              </div>
+
+              <div class="mb-3">
+                <label for="invoice-description" class="form-label">Description</label>
+                <input id="invoice-description" name="description" type="text" class="form-control" maxlength="200" required
+                  [(ngModel)]="form.description">
+              </div>
+
+              <div class="row g-2 mb-3">
+                <div class="col-6">
+                  <label for="invoice-amount" class="form-label">Amount (EUR)</label>
+                  <input id="invoice-amount" name="amount" type="number" class="form-control" step="0.01" min="0.01" max="100000"
+                    required [(ngModel)]="form.amount">
+                </div>
+                <div class="col-6">
+                  <label for="invoice-due" class="form-label">Due date</label>
+                  <input id="invoice-due" name="dueDate" type="date" class="form-control" required [(ngModel)]="form.dueDate">
+                </div>
+              </div>
+
+              @if (errors.length > 0) {
+                <div class="alert alert-danger" role="alert">
+                  @for (message of errors; track $index) {
+                    <div>{{ message }}</div>
+                  }
+                </div>
+              }
+
+              <button type="submit" class="btn btn-primary" [disabled]="saving">
+                @if (saving) {
+                  <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                  Issuing…
+                } @else {
+                  Issue invoice
+                }
+              </button>
+            </form>
+          </div>
+        </section>
+      </div>
+    </div>
+  } @else {
+    <div class="alert alert-warning no-print" role="alert">
+      <strong>Payment code: {{ created.paymentCode }}</strong>
+      <div class="small mt-1">This code is shown only now and cannot be shown again. Give it to the payer or print the bill before you leave.</div>
+    </div>
+
+    <div class="d-flex flex-wrap gap-2 mb-4 no-print">
+      <button type="button" class="btn btn-primary" (click)="print()">
+        <i class="fas fa-print me-1" aria-hidden="true"></i>Print bill
+      </button>
+      <button type="button" class="btn btn-outline-secondary" (click)="newInvoice()">Issue another invoice</button>
+      <a routerLink="/admin/invoices" class="btn btn-outline-secondary">Back to invoices</a>
+    </div>
+
+    <article class="card bill mx-auto" aria-label="Bill">
+      <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4">
+          <div>
+            <h2 class="h4 mb-1">{{ municipality?.name || 'Municipality' }}</h2>
+            <div class="small text-muted">Invoice</div>
+          </div>
+          <div class="text-end">
+            <div class="fw-semibold font-monospace">{{ created.invoiceNumber }}</div>
+            <div class="small">Issued {{ created.issuedAt | date:'mediumDate' }}</div>
+          </div>
+        </div>
+
+        <dl class="row mb-4">
+          <dt class="col-sm-4">Bill to</dt>
+          <dd class="col-sm-8">{{ created.payerName }}</dd>
+          <dt class="col-sm-4">Description</dt>
+          <dd class="col-sm-8">{{ created.description }}</dd>
+          <dt class="col-sm-4">Due date</dt>
+          <dd class="col-sm-8">{{ created.dueDate | date:'mediumDate' }}</dd>
+        </dl>
+
+        <div class="d-flex justify-content-between align-items-center border-top border-bottom py-3 mb-4">
+          <span class="fs-5">Amount due</span>
+          <span class="fs-4 fw-bold">{{ created.amount | currency:'EUR':'symbol':'1.2-2' }}</span>
+        </div>
+
+        <div class="payment-code-box text-center p-3">
+          <div class="small text-uppercase">Payment code</div>
+          <div class="payment-code font-monospace fw-bold">{{ created.paymentCode }}</div>
+        </div>
+
+        <p class="small mt-3 mb-0">
+          To pay, open "Pay a bill" on the municipality website and enter the invoice number and payment code above.
+          You do not need an account.
+        </p>
+      </div>
+    </article>
+  }
 </div>
