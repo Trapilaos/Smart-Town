@@ -176,19 +176,23 @@ namespace API.Services
             var today = DateTime.UtcNow.Date;
             var monthStart = new DateTime(today.Year, today.Month, 1, 0, 0, 0, DateTimeKind.Utc);
 
-            var rows = await _context.Invoices.AsNoTracking()
-                .Select(i => new { i.IsPaid, i.Amount, i.DueDate, i.PaidAt })
-                .ToListAsync();
+            var invoices = _context.Invoices.AsNoTracking();
+            var unpaid = invoices.Where(i => !i.IsPaid);
 
-            var unpaid = rows.Where(r => !r.IsPaid).ToList();
+            // SQLite cannot SUM a decimal, so the amounts are summed as doubles in SQL and rounded back to cents.
+            // Each amount has two decimal places, so the rounded total is exact for any realistic sum.
             return new InvoiceSummaryDTO
             {
-                UnpaidCount = unpaid.Count,
-                UnpaidTotal = unpaid.Sum(r => r.Amount),
-                OverdueCount = unpaid.Count(r => r.DueDate < today),
-                PaidThisMonthTotal = rows.Where(r => r.IsPaid && r.PaidAt >= monthStart).Sum(r => r.Amount),
+                UnpaidCount = await unpaid.CountAsync(),
+                UnpaidTotal = ToCents(await unpaid.SumAsync(i => (double)i.Amount)),
+                OverdueCount = await unpaid.CountAsync(i => i.DueDate < today),
+                PaidThisMonthTotal = ToCents(await invoices
+                    .Where(i => i.IsPaid && i.PaidAt >= monthStart)
+                    .SumAsync(i => (double)i.Amount)),
             };
         }
+
+        private static decimal ToCents(double amount) => decimal.Round((decimal)amount, 2, MidpointRounding.AwayFromZero);
 
         /// <summary>The invoice when the number exists and the code matches, otherwise null.</summary>
         private async Task<Invoice> FindWithCodeAsync(string invoiceNumber, string paymentCode)
