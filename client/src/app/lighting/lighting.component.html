@@ -6,23 +6,33 @@
           <h2><i class="fas fa-lightbulb"></i> Smart Lighting </h2>
         </div>
         <div class="card-body text-center">
-          <div *ngIf="statusMessage === 'Checking...'" class="spinner-border text-success" role="status">
-            <span class="sr-only">Loading...</span>
-          </div>
-          <p *ngIf="statusMessage !== 'Checking...'">
-            <i class="fas"
+          @if (statusMessage === 'Checking...') {
+            <div class="spinner-border text-success" role="status">
+              <span class="sr-only">Loading...</span>
+            </div>
+          }
+          @if (statusMessage !== 'Checking...') {
+            <p>
+              <i class="fas"
               [ngClass]="{'fa-lightbulb-slash': lightingStatus === 'Lights Off', 'fa-lightbulb': lightingStatus === 'Lights On'}"></i>
-            <strong>Lighting Status:</strong> {{ statusMessage }}
-          </p>
-          <p *ngIf="brightnessLevel && lightingStatus === 'Lights On'">
-            <i class="fas fa-sliders-h"></i> <strong>Brightness Level:</strong> {{ brightnessLevel }}
-          </p>
-          <p *ngIf="nextOnTime">
-            <i class="fas fa-clock"></i> <strong>Lights will turn on at:</strong> {{ nextOnTime | date: 'shortTime' }}
-          </p>
-          <p *ngIf="nextOffTime">
-            <i class="fas fa-clock"></i> <strong>Lights will turn off at:</strong> {{ nextOffTime | date: 'shortTime' }}
-          </p>
+              <strong>Lighting Status:</strong> {{ statusMessage }}
+            </p>
+          }
+          @if (brightnessLevel && lightingStatus === 'Lights On') {
+            <p>
+              <i class="fas fa-sliders-h"></i> <strong>Brightness Level:</strong> {{ brightnessLevel }}
+            </p>
+          }
+          @if (nextOnTime) {
+            <p>
+              <i class="fas fa-clock"></i> <strong>Lights will turn on at:</strong> {{ nextOnTime | date: 'shortTime' }}
+            </p>
+          }
+          @if (nextOffTime) {
+            <p>
+              <i class="fas fa-clock"></i> <strong>Lights will turn off at:</strong> {{ nextOffTime | date: 'shortTime' }}
+            </p>
+          }
         </div>
       </div>
     </div>

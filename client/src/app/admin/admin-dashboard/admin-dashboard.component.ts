@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { EventService } from '../../_services/event.service';
 import { CommentService } from '../../_services/comment.service';
 import { ToastrService } from 'ngx-toastr';
@@ -6,9 +6,11 @@ import { Event } from '../../_models/event.model';
 import { Comment } from '../../_models/comment.model';
 
 @Component({
-  selector: 'app-admin-dashboard',
-  templateUrl: './admin-dashboard.component.html',
-  styleUrls: ['./admin-dashboard.component.css']
+    selector: 'app-admin-dashboard',
+    templateUrl: './admin-dashboard.component.html',
+    styleUrls: ['./admin-dashboard.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
+    standalone: false
 })
 export class AdminDashboardComponent implements OnInit {
   events: Event[] = [];

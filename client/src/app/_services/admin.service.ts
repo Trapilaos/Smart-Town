@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { environment } from 'src/environments/environment';
 import { User } from '../_models/user';
@@ -17,7 +17,7 @@ export class AdminService {
   }
 
   updateUserRoles(username: string, roles: string[]): Observable<object> {
-    const rolesString = roles.join(',');
-    return this.http.post(`${this.baseUrl}admin/edit-roles/${username}?roles=${rolesString}`, {});
+    const params = new HttpParams().set('roles', roles.join(','));
+    return this.http.post(`${this.baseUrl}admin/edit-roles/${encodeURIComponent(username)}`, {}, { params });
   }
 }

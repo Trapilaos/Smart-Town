@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 import { TrafficAndParkingService } from '../_services/traffic-and-parking.service';
 import { MembersService } from '../_services/members.service';
 import { ParkingSpace } from '../_models/parking-space.model';
@@ -11,9 +11,11 @@ import { AccountService } from '../_services/account.service';
 import { User } from '../_models/user';
 
 @Component({
-  selector: 'app-traffic',
-  templateUrl: './traffic.component.html',
-  styleUrls: ['./traffic.component.css']
+    selector: 'app-traffic',
+    templateUrl: './traffic.component.html',
+    styleUrls: ['./traffic.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
+    standalone: false
 })
 export class TrafficComponent implements OnInit, OnDestroy {
   parkingSpaces: ParkingSpace[] = [];
@@ -26,7 +28,7 @@ export class TrafficComponent implements OnInit, OnDestroy {
   reservationDuration: number | null = null;
   reservationTime: Date = new Date();
   activeReservation: Reservation | null = null;
-  private ws: WebSocket | null = null;
+  private readonly visibilityHandler = () => this.handleVisibilityChange();
 
   private loadCurrentUserSubject = new Subject<void>();
   private currentUserSubscriptions = new Subscription();
@@ -43,53 +45,24 @@ export class TrafficComponent implements OnInit, OnDestroy {
     this.loadTrafficData();
     this.loadParkingSpaces();
     this.initCurrentUserSubscription();
-    this.setupWebSocket();
     this.loadActiveReservation();
 
-    document.addEventListener('visibilitychange', this.handleVisibilityChange.bind(this));
+    document.addEventListener('visibilitychange', this.visibilityHandler);
   }
 
   ngOnDestroy(): void {
     this.currentUserSubscriptions.unsubscribe();
     this.destroy$.next();
     this.destroy$.complete();
-    this.closeWebSocket();
 
-    document.removeEventListener('visibilitychange', this.handleVisibilityChange.bind(this));
-  }
-
-  setupWebSocket() {
-    this.ws = new WebSocket('wss://example.com/socket'); // Replace with your WebSocket URL
-    this.ws.onopen = (event) => {
-      console.log('WebSocket connection opened', event);
-    };
-    this.ws.onmessage = (event) => {
-      const message = JSON.parse(event.data);
-      console.log('WebSocket message received:', message);
-      // Handle WebSocket message
-    };
-    this.ws.onclose = (event) => {
-      console.log('WebSocket connection closed', event);
-    };
-    this.ws.onerror = (error) => {
-      console.error('WebSocket error', error);
-    };
-  }
-
-  closeWebSocket() {
-    if (this.ws) {
-      this.ws.close();
-      this.ws = null;
-    }
+    document.removeEventListener('visibilitychange', this.visibilityHandler);
   }
 
   handleVisibilityChange() {
-    if (document.hidden) {
-      console.log('Page hidden, closing WebSocket');
-      this.closeWebSocket();
-    } else {
-      console.log('Page visible, reopening WebSocket');
-      this.setupWebSocket();
+    // Refresh live data when the tab becomes visible again.
+    if (!document.hidden) {
+      this.loadTrafficData();
+      this.loadParkingSpaces();
     }
   }
 

@@ -1,12 +1,16 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { WasteManagementService } from '../_services/waste-management.service';
 import { WasteBin } from '../_models/waste-bin.model';
 import { ToastrService } from 'ngx-toastr';
+import { take } from 'rxjs';
+import { AccountService } from '../_services/account.service';
 
 @Component({
-  selector: 'app-trash',
-  templateUrl: './trash.component.html',
-  styleUrls: ['./trash.component.css']
+    selector: 'app-trash',
+    templateUrl: './trash.component.html',
+    styleUrls: ['./trash.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
+    standalone: false
 })
 export class TrashComponent implements OnInit {
   wasteBins: WasteBin[] = [];
@@ -14,10 +18,15 @@ export class TrashComponent implements OnInit {
   loading: boolean = false;
   errorMessage: string = '';
   statusMessage: string = '';
+  isAdmin = false;
 
-  constructor(private wasteManagementService: WasteManagementService, private toastr: ToastrService) { }
+  constructor(private wasteManagementService: WasteManagementService, private toastr: ToastrService, private accountService: AccountService) { }
 
   ngOnInit(): void {
+    // Emptying a bin (PUT /api/waste/{id}) is Admin-only.
+    this.accountService.currentUser$.pipe(take(1)).subscribe(user => {
+      this.isAdmin = !!user?.roles?.includes('Admin');
+    });
     this.loadWasteBins();
     this.calculateOptimalPath();
   }

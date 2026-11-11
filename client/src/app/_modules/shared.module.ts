@@ -9,7 +9,7 @@ import { ToastrModule } from 'ngx-toastr';
   declarations: [],
   imports: [
     CommonModule,
-    BsDropdownModule.forRoot(),
+    BsDropdownModule,
     ToastrModule.forRoot({
       positionClass: 'toast-bottom-right'
     })

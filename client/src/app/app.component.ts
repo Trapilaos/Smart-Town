@@ -1,11 +1,13 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { AccountService } from './_services/account.service';
 import { User } from './_models/user';
 
 @Component({
-  selector: 'app-root',
-  templateUrl: './app.component.html',
-  styleUrls: ['./app.component.css']
+    selector: 'app-root',
+    templateUrl: './app.component.html',
+    styleUrls: ['./app.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
+    standalone: false
 })
 export class AppComponent implements OnInit {
   title = 'Smart-Town';
@@ -22,8 +24,12 @@ export class AppComponent implements OnInit {
   setCurrentUser(){
     const userString = localStorage.getItem('user');
     if(!userString) return;
-    const user : User = JSON.parse(userString);
-    this.accountService.setCurrentUser(user);
+    try {
+      const user : User = JSON.parse(userString);
+      this.accountService.setCurrentUser(user);
+    } catch {
+      localStorage.removeItem('user');
+    }
 
   }
 

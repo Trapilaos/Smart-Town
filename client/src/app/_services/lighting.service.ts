@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 import { catchError, Observable, throwError } from 'rxjs';
 
@@ -12,7 +12,7 @@ export class LightingService {
   constructor(private http: HttpClient) { }
 
   getLightingStatus(town: string): Observable<any> {
-    return this.http.get<any>(`${this.apiUrl}?town=${town}`).pipe(
+    return this.http.get<any>(this.apiUrl, { params: new HttpParams().set('town', town) }).pipe(
       catchError(this.handleError)
     );
   }

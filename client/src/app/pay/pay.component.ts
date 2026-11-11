@@ -1,13 +1,15 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { PaymentService } from '../_services/payment.service';
 import { Payment } from '../_models/payment.model';
 import { ToastrService } from 'ngx-toastr';
 import { EMPTY, catchError, map, tap } from 'rxjs';
 
 @Component({
-  selector: 'app-pay',
-  templateUrl: './pay.component.html',
-  styleUrls: ['./pay.component.css']
+    selector: 'app-pay',
+    templateUrl: './pay.component.html',
+    styleUrls: ['./pay.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
+    standalone: false
 })
 export class PayComponent {
   payment: Payment = this.initializePayment();

@@ -5,7 +5,7 @@ import { catchError, tap } from 'rxjs/operators';
 import { ParkingSpace } from '../_models/parking-space.model';
 import { TrafficData } from '../_models/traffic-data.model';
 import { Reservation } from '../_models/reservation.model';
-import { environment } from 'src/environments/environment.development';
+import { environment } from 'src/environments/environment';
 
 @Injectable({
   providedIn: 'root'
