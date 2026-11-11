@@ -3,9 +3,10 @@ import { AdminService } from '../../_services/admin.service';
 import { ToastrService } from 'ngx-toastr';
 
 @Component({
-  selector: 'app-user-management',
-  templateUrl: './user-management.component.html',
-  styleUrls: ['./user-management.component.css']
+    selector: 'app-user-management',
+    templateUrl: './user-management.component.html',
+    styleUrls: ['./user-management.component.css'],
+    standalone: false
 })
 export class UserManagementComponent implements OnInit {
   users: any[] = [];

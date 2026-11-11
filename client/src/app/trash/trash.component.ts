@@ -6,9 +6,10 @@ import { take } from 'rxjs';
 import { AccountService } from '../_services/account.service';
 
 @Component({
-  selector: 'app-trash',
-  templateUrl: './trash.component.html',
-  styleUrls: ['./trash.component.css']
+    selector: 'app-trash',
+    templateUrl: './trash.component.html',
+    styleUrls: ['./trash.component.css'],
+    standalone: false
 })
 export class TrashComponent implements OnInit {
   wasteBins: WasteBin[] = [];

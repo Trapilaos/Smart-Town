@@ -5,9 +5,10 @@ import { ToastrService } from 'ngx-toastr';
 import { EMPTY, catchError, map, tap } from 'rxjs';
 
 @Component({
-  selector: 'app-pay',
-  templateUrl: './pay.component.html',
-  styleUrls: ['./pay.component.css']
+    selector: 'app-pay',
+    templateUrl: './pay.component.html',
+    styleUrls: ['./pay.component.css'],
+    standalone: false
 })
 export class PayComponent {
   payment: Payment = this.initializePayment();

@@ -8,9 +8,10 @@ import { ToastrService } from 'ngx-toastr';
 import { AccountService } from '../_services/account.service';
 
 @Component({
-  selector: 'app-member',
-  templateUrl: './member.component.html',
-  styleUrls: ['./member.component.css']
+    selector: 'app-member',
+    templateUrl: './member.component.html',
+    styleUrls: ['./member.component.css'],
+    standalone: false
 })
 export class MemberComponent implements OnInit {
   events: Event[] = [];

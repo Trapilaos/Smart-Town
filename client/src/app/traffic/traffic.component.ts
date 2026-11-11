@@ -11,9 +11,10 @@ import { AccountService } from '../_services/account.service';
 import { User } from '../_models/user';
 
 @Component({
-  selector: 'app-traffic',
-  templateUrl: './traffic.component.html',
-  styleUrls: ['./traffic.component.css']
+    selector: 'app-traffic',
+    templateUrl: './traffic.component.html',
+    styleUrls: ['./traffic.component.css'],
+    standalone: false
 })
 export class TrafficComponent implements OnInit, OnDestroy {
   parkingSpaces: ParkingSpace[] = [];

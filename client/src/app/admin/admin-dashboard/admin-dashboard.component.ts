@@ -6,9 +6,10 @@ import { Event } from '../../_models/event.model';
 import { Comment } from '../../_models/comment.model';
 
 @Component({
-  selector: 'app-admin-dashboard',
-  templateUrl: './admin-dashboard.component.html',
-  styleUrls: ['./admin-dashboard.component.css']
+    selector: 'app-admin-dashboard',
+    templateUrl: './admin-dashboard.component.html',
+    styleUrls: ['./admin-dashboard.component.css'],
+    standalone: false
 })
 export class AdminDashboardComponent implements OnInit {
   events: Event[] = [];

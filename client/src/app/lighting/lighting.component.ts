@@ -2,9 +2,10 @@ import { Component, OnInit } from '@angular/core';
 import { LightingService } from '../_services/lighting.service';
 
 @Component({
-  selector: 'app-lighting',
-  templateUrl: './lighting.component.html',
-  styleUrls: ['./lighting.component.css']
+    selector: 'app-lighting',
+    templateUrl: './lighting.component.html',
+    styleUrls: ['./lighting.component.css'],
+    standalone: false
 })
 export class LightingComponent implements OnInit {
   statusMessage: string = 'Checking...';
