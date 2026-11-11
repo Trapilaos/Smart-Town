@@ -26,6 +26,7 @@ namespace API.Extensions
             services.AddScoped<ICommentService, CommentService>();
             services.AddScoped<IAuditService, AuditService>();
             services.AddHttpClient<BoundaryLookupService>();
+            services.AddForwardedHeaderTrust(config);
             services.AddRateLimitPolicies(config);
             services.AddHostedService<BoundaryAutoFetchService>();
             services.AddHostedService<TrafficDataBackgroundService>();

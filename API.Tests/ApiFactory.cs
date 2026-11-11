@@ -81,9 +81,19 @@ public class ApiFactory : WebApplicationFactory<Program>
             var hosted = services.Where(d => d.ServiceType == typeof(IHostedService)).ToList();
             foreach (var d in hosted) services.Remove(d);
 
+            services.AddSingleton<IStartupFilter, TestRemoteIpFilter>();
+
             services.AddHttpClient<API.Services.BoundaryLookupService>()
                 .ConfigurePrimaryHttpMessageHandler(() => NominatimStub);
         });
+    }
+
+    /// <summary>Sets the TCP peer address (and optionally X-Forwarded-For) for one test request.</summary>
+    public static HttpRequestMessage FromRemote(HttpRequestMessage request, string remoteIp, string forwardedFor = null)
+    {
+        request.Headers.Add(TestRemoteIpFilter.Header, remoteIp);
+        if (forwardedFor != null) request.Headers.Add("X-Forwarded-For", forwardedFor);
+        return request;
     }
 
     public HttpClient CreateApiClient() => CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });

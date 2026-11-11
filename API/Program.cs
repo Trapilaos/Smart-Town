@@ -29,6 +29,8 @@ public class Program
 
         // Configure the HTTP request pipeline.
         // Security headers go first so every response carries them, including error responses.
+        // Forwarded headers go first, so the rate limiter and logs see the real client address.
+        app.UseForwardedHeaders();
         app.UseMiddleware<SecurityHeadersMiddleware>();
         app.UseMiddleware<ExceptionMiddleware>();
 

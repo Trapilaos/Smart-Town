@@ -7,11 +7,15 @@ services:
       # Required, at least 64 characters. Copy .env.example to .env and set a real value.
       TokenKey: ${TOKEN_KEY:?Set TOKEN_KEY in .env (copy .env.example)}
       ConnectionStrings__DefaultConnection: Data Source=/data/smarttown.db
+      # The client proxy sits on the smarttown network. Only its forwarded client address is trusted.
+      ForwardedHeaders__KnownNetworks__0: 172.28.0.0/24
       # Initial admin password, used only when no admin exists yet. Set ADMIN_PASSWORD in .env (copy .env.example).
       Seed__AdminPassword: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
     volumes:
       - api-data:/data
     restart: unless-stopped
+    networks:
+      - smarttown
 
   client:
     build:
@@ -21,6 +25,14 @@ services:
     depends_on:
       - api
     restart: unless-stopped
+    networks:
+      - smarttown
 
 volumes:
   api-data:
+
+networks:
+  smarttown:
+    ipam:
+      config:
+        - subnet: 172.28.0.0/24
