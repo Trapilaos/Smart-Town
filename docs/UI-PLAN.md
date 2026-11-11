@@ -123,3 +123,22 @@ Run against the merged branch with the live dev servers:
   - check an invoice
 - **Console:** no errors in the console on any page.
 - **Report:** pass/fail per item, with screenshots of failures.
+
+---
+
+## Round 2: fixes from the Sonnet QA report (planned by Opus, built by Haiku, retested by Sonnet)
+
+The QA pass (1280px and 375px; anonymous, member and admin) passed the flows, registration, F1–F3, F5, F6 and F8–F12, and found the defects below.
+
+| # | Defect | Root cause | Fix |
+|---|---|---|---|
+| D1 (high) | The mobile hamburger does nothing | Bootstrap JS is never loaded (`angular.json` `"scripts": []`), so `data-bs-toggle="collapse"` is inert | Drop the Bootstrap JS toggles. Add an `isMenuOpen` flag in `NavComponent`: the toggler flips it, `[class.show]="isMenuOpen"` on `.navbar-collapse`, `[attr.aria-expanded]`, and every nav link and logout sets it to false. Remove the DOM-click helper duplicated in nav and home. Home's "Log in" call to action just focuses `#navUsername` after `isMenuOpen = true` (inject nav state via a tiny `NavStateService` with a signal or BehaviorSubject). The user dropdown and the Admin dropdown use ngx-bootstrap `dropdown` (already in SharedModule), not `data-bs-toggle`. |
+| D2 (med) | A direct load of a guarded URL leaves a blank page | Guards return `false`, and on the initial navigation that cancels routing with nothing rendered. The user is also restored from localStorage only in `AppComponent.ngOnInit`, which can run after guards | Guards return `inject(Router).createUrlTree(['/'])` instead of `false` (keep the toast). Move the localStorage restore into `AccountService`'s constructor (with try/catch), and remove it from AppComponent. Update `guards.spec.ts` to expect a `UrlTree`. |
+| D3 (med) | `/errors` is still routed | Only the link was removed | Register the `errors` route only when `!environment.production` (build the routes array conditionally). |
+| D4 | The collection-route list is misaligned | A justify-between flex on the items | Make it a proper vertical stepper: a numbered circle, then the name left-aligned next to it, with a thin connector line between steps. "Back to start" uses the same row layout with a `fa-undo` icon. |
+| D5 | Dropdown items look disabled | Dark menu with muted item colour | Use a light dropdown menu (default Bootstrap `.dropdown-menu`) with normal dark item text, and the active item `fw-semibold`. |
+| D6 | Pale `.page-title`; white text on orange is unreadable | Theme text colour plus `bg-warning text-white` | `.page-title { color: var(--bs-primary) }` (Flatly navy). The Unpaid badge becomes `text-bg-warning`, which picks a dark text colour. The Lighting alert keeps `alert-warning` but sets `text-dark`. |
+| D7 | The admin comment queue shows "User #1" | The API returns only `userId` | Small API change: `GET /api/comments` returns a `CommentDTO` `{ id, content, date, seen, userId, username }`, with the username joined from Users in `CommentService`. Add the DTO under `API/DTOs`. Keep POST unchanged. The client shows the username. Update or extend `API.Tests` if a test asserts on the shape. |
+| D8 | Minor items | — | (a) The Lighting request sets `SKIP_ERROR_TOAST`, so only the inline warning shows. (b) The parking grid row gets `align-items-start`. (c) The Create Event photo URL is invalid only when non-empty and malformed. (d) Remove `console.error` / `console.log` of expected HTTP errors from the services. |
+
+Rules: the same "Rules for all agents" as above. Do NOT touch `API/Services/ParkingService.cs`. Everything else, including the API changes for D7, is in scope for a single Haiku builder working in the main checkout.
