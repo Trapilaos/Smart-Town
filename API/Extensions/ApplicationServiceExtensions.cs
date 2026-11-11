@@ -27,6 +27,9 @@ namespace API.Extensions
             services.AddScoped<IAuditService, AuditService>();
             services.AddHttpClient<BoundaryLookupService>();
             services.AddForwardedHeaderTrust(config);
+            services.AddMemoryCache();
+            services.Configure<LoginThrottleOptions>(config.GetSection("LoginThrottle"));
+            services.AddSingleton<LoginThrottle>();
             services.AddRateLimitPolicies(config);
             services.AddHostedService<BoundaryAutoFetchService>();
             services.AddHostedService<TrafficDataBackgroundService>();

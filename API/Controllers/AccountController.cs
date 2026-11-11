@@ -2,6 +2,7 @@ using API.DTOs;
 using API.Entities;
 using API.Extensions;
 using API.Interfaces;
+using API.Services;
 using AutoMapper;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -19,15 +20,17 @@ namespace API.Controllers
         private readonly SignInManager<AppUser> _signInManager;
         private readonly ITokenService _tokenService;
         private readonly ILogger<AccountController> _logger;
+        private readonly LoginThrottle _loginThrottle;
 
         public AccountController(UserManager<AppUser> userManager, SignInManager<AppUser> signInManager,
-            ITokenService tokenService, IMapper mapper, ILogger<AccountController> logger)
+            ITokenService tokenService, IMapper mapper, ILogger<AccountController> logger, LoginThrottle loginThrottle)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _tokenService = tokenService;
             _mapper = mapper;
             _logger = logger;
+            _loginThrottle = loginThrottle;
         }
 
         /// <summary>
@@ -59,8 +62,8 @@ namespace API.Controllers
         }
 
         /// <summary>
-        /// Logs a user in. Failed attempts count towards a temporary lockout, and the error message
-        /// never reveals whether the username exists.
+        /// Logs a user in. Failures are throttled per username and client address, so one client cannot lock the
+        /// account out for everyone else. The error message never reveals whether the username exists.
         /// </summary>
         [HttpPost("login")]
         [EnableRateLimiting(RateLimitPolicies.Auth)]
@@ -69,32 +72,36 @@ namespace API.Controllers
             if (string.IsNullOrWhiteSpace(loginDTO?.Username) || string.IsNullOrEmpty(loginDTO.Password))
                 return Unauthorized(InvalidCredentials);
 
-            AppUser user;
+            // Usernames match exactly, ignoring case. There is no alias for any other account.
+            var username = loginDTO.Username.ToLower();
+            var clientAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
-            if (loginDTO.Username.Equals("Admin", StringComparison.OrdinalIgnoreCase))
+            if (_loginThrottle.IsBlocked(username, clientAddress))
             {
-                var adminUsers = await _userManager.GetUsersInRoleAsync("Admin");
-                user = adminUsers.FirstOrDefault();
+                _logger.LogWarning("Login refused: too many failed attempts from this address");
+                return Unauthorized(InvalidCredentials);
             }
-            else
-            {
-                user = await _userManager.Users
-                    .Include(p => p.Photos)
-                    .SingleOrDefaultAsync(x => x.UserName == loginDTO.Username.ToLower());
-            }
+
+            var user = await _userManager.Users
+                .Include(p => p.Photos)
+                .SingleOrDefaultAsync(x => x.UserName == username);
 
             if (user == null)
             {
+                _loginThrottle.RecordFailure(username, clientAddress);
                 _logger.LogWarning("Failed login: unknown username");
                 return Unauthorized(InvalidCredentials);
             }
 
-            var result = await _signInManager.CheckPasswordSignInAsync(user, loginDTO.Password, lockoutOnFailure: true);
+            var result = await _signInManager.CheckPasswordSignInAsync(user, loginDTO.Password, lockoutOnFailure: false);
             if (!result.Succeeded)
             {
-                _logger.LogWarning("Failed login for user id {UserId} (lockedOut={LockedOut})", user.Id, result.IsLockedOut);
+                _loginThrottle.RecordFailure(username, clientAddress);
+                _logger.LogWarning("Failed login for user id {UserId}", user.Id);
                 return Unauthorized(InvalidCredentials);
             }
+
+            _loginThrottle.Reset(username, clientAddress);
 
             var mainPhoto = user.Photos?.FirstOrDefault(x => x.IsMain);
 

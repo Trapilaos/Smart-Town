@@ -54,17 +54,4 @@ public class AuthTests
         Assert.Equal(HttpStatusCode.Unauthorized, unknownUser.StatusCode);
         Assert.Equal(await wrongPassword.Content.ReadAsStringAsync(), await unknownUser.Content.ReadAsStringAsync());
     }
-
-    [Fact]
-    public async Task Repeated_failed_logins_lock_the_account()
-    {
-        var member = await TestHelpers.RegisterMemberAsync(_client);
-
-        for (var i = 0; i < 10; i++)
-            await _client.PostAsJsonAsync("/api/account/login", new { username = member.Username, password = "Wrong123" });
-
-        // Even the correct password is refused while locked out.
-        var response = await _client.PostAsJsonAsync("/api/account/login", new { username = member.Username, password = "Passw0rd" });
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
-    }
 }

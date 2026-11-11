@@ -17,7 +17,8 @@ namespace API.Extensions
             services.AddIdentityCore<AppUser>(opt =>
             {
                 opt.Password.RequireNonAlphanumeric = false;
-                opt.Lockout.AllowedForNewUsers = true;
+                // Login failures are throttled per (username, address) by LoginThrottle, so Identity lockout is off.
+                opt.Lockout.AllowedForNewUsers = false;
                 opt.Lockout.MaxFailedAccessAttempts = 5;
                 opt.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(10);
             })

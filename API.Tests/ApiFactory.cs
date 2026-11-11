@@ -47,6 +47,9 @@ public class ApiFactory : WebApplicationFactory<Program>
         ["RateLimits:GlobalPerMinute"] = "100000",
     };
 
+    /// <summary>Any other configuration for one host, such as a short login-throttle window for a test.</summary>
+    protected virtual IReadOnlyDictionary<string, string> ExtraSettings => new Dictionary<string, string>();
+
     /// <summary>The environment the host runs in. Subclasses use Production to test non-development behaviour.</summary>
     protected virtual string EnvironmentName => "Testing";
 
@@ -70,7 +73,7 @@ public class ApiFactory : WebApplicationFactory<Program>
     {
         builder.UseEnvironment(EnvironmentName);
         builder.ConfigureLogging(l => l.SetMinimumLevel(LogLevel.Warning));
-        foreach (var (key, value) in RateLimitSettings.Concat(SeedSettings))
+        foreach (var (key, value) in RateLimitSettings.Concat(SeedSettings).Concat(ExtraSettings))
         {
             builder.UseSetting(key, value);
         }
