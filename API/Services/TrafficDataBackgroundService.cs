@@ -3,56 +3,71 @@ using Microsoft.EntityFrameworkCore;
 
 namespace API.Services
 {
-    public class TrafficDataBackgroundService : IHostedService
+    /// <summary>
+    /// Keeps the (simulated) traffic data fresh. Data is only regenerated when the stored data has run out,
+    /// never blindly on startup.
+    /// </summary>
+    public class TrafficDataBackgroundService : BackgroundService
     {
-        private readonly IServiceScopeFactory _serviceScopeFactory;
-        private Timer _timer;
+        private static readonly TimeSpan CheckInterval = TimeSpan.FromHours(1);
 
-        public TrafficDataBackgroundService(IServiceScopeFactory serviceScopeFactory)
+        private readonly IServiceScopeFactory _serviceScopeFactory;
+        private readonly ILogger<TrafficDataBackgroundService> _logger;
+
+        public TrafficDataBackgroundService(IServiceScopeFactory serviceScopeFactory, ILogger<TrafficDataBackgroundService> logger)
         {
             _serviceScopeFactory = serviceScopeFactory;
+            _logger = logger;
         }
 
-        /// <summary>
-        /// Starts the background service.
-        /// </summary>
-        /// <param name="cancellationToken">The cancellation token.</param>
-        /// <returns>A completed task.</returns>
-        public Task StartAsync(CancellationToken cancellationToken)
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            _timer = new Timer(ExecuteAsync, null, TimeSpan.Zero, TimeSpan.FromDays(1));
-            return Task.CompletedTask;
+            using var timer = new PeriodicTimer(CheckInterval);
+
+            do
+            {
+                try
+                {
+                    await RefreshIfStaleAsync(stoppingToken);
+                }
+                catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+                {
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    // A failed refresh must never take the host down; try again on the next tick.
+                    _logger.LogError(ex, "Failed to refresh traffic data");
+                }
+            }
+            while (await WaitForNextTickAsync(timer, stoppingToken));
         }
 
-        /// <summary>
-        /// Stops the background service.
-        /// </summary>
-        /// <param name="cancellationToken">The cancellation token.</param>
-        /// <returns>A completed task.</returns>
-        public Task StopAsync(CancellationToken cancellationToken)
+        private static async Task<bool> WaitForNextTickAsync(PeriodicTimer timer, CancellationToken token)
         {
-            _timer.Dispose();
-            return Task.CompletedTask;
+            try
+            {
+                return await timer.WaitForNextTickAsync(token);
+            }
+            catch (OperationCanceledException)
+            {
+                return false;
+            }
         }
 
-        /// <summary>
-        /// Executes the background service operation.
-        /// </summary>
-        /// <param name="state">The state object (not used).</param>
-        private async void ExecuteAsync(object state)
+        private async Task RefreshIfStaleAsync(CancellationToken token)
         {
             using var scope = _serviceScopeFactory.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<DataContext>();
 
-            // Clear existing data
-            var existingData = await context.TrafficData.ToListAsync();
-            context.TrafficData.RemoveRange(existingData);
-            await context.SaveChangesAsync();
+            var hasFutureData = await context.TrafficData.AnyAsync(t => t.Timestamp > DateTime.UtcNow, token);
+            if (hasFutureData) return;
 
-            // Generate new data
-            var newData = TrafficDataGenerator.GenerateTrafficData();
-            await context.TrafficData.AddRangeAsync(newData);
-            await context.SaveChangesAsync();
+            context.TrafficData.RemoveRange(await context.TrafficData.ToListAsync(token));
+            await context.TrafficData.AddRangeAsync(TrafficDataGenerator.GenerateTrafficData(), token);
+            await context.SaveChangesAsync(token);
+
+            _logger.LogInformation("Traffic data regenerated");
         }
     }
 }

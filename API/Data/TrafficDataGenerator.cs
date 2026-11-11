@@ -13,8 +13,7 @@ namespace API.Data
             var trafficDataList = new List<TrafficData>();
             var random = new Random();
             var locations = new[] { "3is Septemvriou", "Alexandras", "Stadiou", "Vouliagmenis" };
-            var currentTime = DateTime.Now;
-            int id = 1; // Initialize id to 1
+            var currentTime = DateTime.UtcNow;
 
             var peakHours = new[] { 7, 8, 9, 16, 17, 18 };
 
@@ -40,7 +39,6 @@ namespace API.Data
                     // Create a new TrafficData entity with the generated data
                     trafficDataList.Add(new TrafficData
                     {
-                        Id = id++, // Assign a unique ID to each TrafficData entity
                         Location = location,
                         TrafficFlow = trafficFlow, // Traffic flow percentage between 0 and 100
                         Timestamp = currentTime.AddHours(i)
