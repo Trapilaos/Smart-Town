@@ -1,5 +1,136 @@
 <div class="page">
   <header class="page-header">
     <h1 class="page-title">Parking</h1>
+    <p class="page-subtitle">Free and full parking spaces right now.</p>
   </header>
+
+  @if (loading) {
+    <div class="loading-state">
+      <div class="spinner-border text-primary" role="status"></div>
+      <p class="mt-2 mb-0">Loading…</p>
+    </div>
+  } @else if (error) {
+    <div class="alert alert-danger" role="alert">Parking spaces are unavailable right now. {{ error }}</div>
+  } @else {
+    <div class="row g-4">
+      <div class="col-lg-7">
+        <div class="d-flex align-items-center gap-3 small mb-2" aria-hidden="true">
+          <span><span class="legend-dot bg-success"></span> Free</span>
+          <span><span class="legend-dot bg-danger"></span> Full</span>
+        </div>
+        <app-map [boundary]="boundary" [markers]="markers" [selectedId]="selectedMapId"
+          (markerClick)="onMarkerClick($event)" height="480px"></app-map>
+      </div>
+
+      <div class="col-lg-5">
+        @if (loggedIn && activeReservation) {
+          <section class="card card-elevated mb-4" aria-labelledby="reservation-heading">
+            <div class="card-body">
+              <h2 id="reservation-heading" class="h6 mb-2"><i class="fas fa-ticket-alt text-primary"></i> Your reservation</h2>
+              <p class="mb-1 fw-semibold">{{ spaceName(activeReservation.parkingSpaceId) }}</p>
+              <p class="small mb-0">
+                <i class="fas fa-clock"></i>
+                {{ activeReservation.reservationTime | date:'shortTime' }} to {{ getEndTime(activeReservation) | date:'shortTime' }}
+              </p>
+            </div>
+          </section>
+        }
+
+        @if (spaces.length === 0) {
+          <div class="empty-state">
+            <i class="fas fa-parking"></i>
+            <p>No parking spaces are set up yet.</p>
+          </div>
+        } @else {
+          <div class="vstack gap-3">
+            @for (space of spaces; track space.id) {
+              <article class="card card-elevated" [class.parking-card--selected]="selectedMapId === space.id">
+                <div class="card-body">
+                  <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
+                    <h2 class="h6 mb-0">
+                      <i [ngClass]="parkingTypeIcon(space.type)" class="me-1 text-primary" aria-hidden="true"></i>{{ space.name }}
+                    </h2>
+                    <span class="badge" [ngClass]="availabilityClass(space)">
+                      {{ isFull(space) ? 'Full' : space.freeNow + ' free' }}
+                    </span>
+                  </div>
+                  @if (space.address) {
+                    <p class="small text-muted mb-1">{{ space.address }}</p>
+                  }
+                  <p class="small mb-2">
+                    {{ space.type }} · {{ space.hourlyRate | currency:'EUR':'symbol':'1.2-2' }} per hour ·
+                    {{ space.currentVehicles }} of {{ space.maxVehicles }} in use
+                  </p>
+                  <div class="progress mb-3" role="progressbar"
+                    [attr.aria-label]="space.name + ' occupancy'"
+                    [attr.aria-valuenow]="occupancyPercent(space)" aria-valuemin="0" aria-valuemax="100">
+                    <div class="progress-bar" [ngClass]="availabilityClass(space)"
+                      [style.width.%]="occupancyPercent(space)"></div>
+                  </div>
+
+                  @if (!loggedIn) {
+                    <button type="button" class="btn btn-outline-secondary w-100" disabled>Log in to reserve</button>
+                  } @else if (isFull(space)) {
+                    <button type="button" class="btn btn-outline-secondary w-100" disabled>Full</button>
+                  } @else {
+                    <button type="button" class="btn btn-primary w-100"
+                      [disabled]="hasActiveReservation()"
+                      (click)="selectParkingSpace(space)">
+                      <i class="fas fa-parking"></i> Reserve
+                    </button>
+                    @if (hasActiveReservation() && !isSelected(space)) {
+                      <p class="small text-muted mt-2 mb-0">You already have an active reservation.</p>
+                    }
+                  }
+
+                  @if (isSelected(space)) {
+                    <form class="reserve-form mt-3 pt-3" novalidate (ngSubmit)="confirmReservation()">
+                      <p class="small mb-2">
+                        <i class="fas fa-clock"></i> Starts at {{ reservationTime | date:'shortTime' }}
+                      </p>
+                      <div class="d-flex flex-wrap gap-2 mb-3">
+                        @for (preset of durationPresets; track preset.minutes) {
+                          <button type="button" class="btn btn-sm"
+                            [ngClass]="reservationDuration === preset.minutes ? 'btn-primary' : 'btn-outline-primary'"
+                            (click)="reservationDuration = preset.minutes">
+                            {{ preset.label }}
+                          </button>
+                        }
+                      </div>
+                      <label class="form-label" [attr.for]="'duration-' + space.id">
+                        Duration in minutes ({{ minDuration }}–{{ maxDuration }})
+                      </label>
+                      <input type="number" class="form-control" name="duration"
+                        [id]="'duration-' + space.id"
+                        [attr.min]="minDuration" [attr.max]="maxDuration" step="1"
+                        [class.is-invalid]="durationInvalid"
+                        [attr.aria-invalid]="durationInvalid"
+                        [(ngModel)]="reservationDuration">
+                      @if (durationInvalid) {
+                        <div class="invalid-feedback">Enter a whole number of minutes between {{ minDuration }} and {{ maxDuration }}.</div>
+                      }
+                      @if (reservationError) {
+                        <div class="alert alert-danger mt-3 mb-0 py-2" role="alert">{{ reservationError }}</div>
+                      }
+                      <div class="d-flex gap-2 mt-3">
+                        <button type="submit" class="btn btn-success" [disabled]="!isDurationValid() || reserving">
+                          @if (reserving) {
+                            <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                            Reserving…
+                          } @else {
+                            Confirm reservation
+                          }
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" (click)="cancelReservation()">Cancel</button>
+                      </div>
+                    </form>
+                  }
+                </div>
+              </article>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  }
 </div>

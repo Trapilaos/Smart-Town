@@ -1,122 +1,155 @@
 <div class="page container">
   <div class="page-header">
     <h1 class="page-title">Admin dashboard</h1>
-    <p class="page-subtitle">Manage events, moderate comments and users.</p>
+    <p class="page-subtitle">Today at a glance: bins, parking, invoices and events.</p>
   </div>
 
-  <div class="row g-4 mb-5">
-    <div class="col-md-6">
-      <div class="card-elevated card h-100">
-        <div class="card-body text-center p-4">
-          <i class="fas fa-calendar-plus fa-2x mb-3 text-primary"></i>
-          <h2 class="h5 card-title">Create event</h2>
-          <p class="card-text text-body-secondary">Add a new event for the community.</p>
-          <a routerLink="/admin/events/new" class="btn btn-primary">Create event</a>
-        </div>
+  <section class="mb-5" aria-labelledby="kpi-heading">
+    <h2 id="kpi-heading" class="visually-hidden">Key figures</h2>
+    <div class="row row-cols-2 row-cols-lg-5 g-3">
+      <div class="col">
+        <a class="card card-elevated h-100 text-decoration-none text-reset" routerLink="/admin/bins">
+          <div class="card-body">
+            <div class="small text-body-secondary">Bins at {{ highFillPercent }}% or more</div>
+            <div class="kpi-value">{{ binsHigh.loading ? '…' : binsHigh.failed ? '—' : binsHigh.value }}</div>
+          </div>
+        </a>
       </div>
-    </div>
-    <div class="col-md-6">
-      <div class="card-elevated card h-100">
-        <div class="card-body text-center p-4">
-          <i class="fas fa-users-cog fa-2x mb-3 text-primary"></i>
-          <h2 class="h5 card-title">Manage users</h2>
-          <p class="card-text text-body-secondary">Change member and admin roles.</p>
-          <a routerLink="/admin/users" class="btn btn-primary">Manage users</a>
-        </div>
+      <div class="col">
+        <a class="card card-elevated h-100 text-decoration-none text-reset" routerLink="/admin/parking">
+          <div class="card-body">
+            <div class="small text-body-secondary">Free parking now</div>
+            <div class="kpi-value">{{ freeParking.loading ? '…' : freeParking.failed ? '—' : freeParking.value }}</div>
+          </div>
+        </a>
       </div>
-    </div>
-  </div>
-
-  <section class="mb-5" aria-labelledby="events-heading">
-    <h2 id="events-heading" class="h4 mb-3">Events</h2>
-
-    @if (eventsLoading) {
-      <div class="loading-state">
-        <div class="spinner-border text-primary" role="status"></div>
-        <p class="mt-2 mb-0">Loading…</p>
-      </div>
-    } @else if (eventsError) {
-      <div class="alert alert-warning" role="alert">Events could not be loaded. {{ eventsError }}</div>
-    } @else if (events.length === 0) {
-      <div class="empty-state">
-        <i class="fas fa-calendar-times"></i>
-        <p>No events yet. Create one to get the community started.</p>
-      </div>
-    } @else {
-      <ul class="list-group card-elevated">
-        @for (event of events; track event.id) {
-          <li class="list-group-item d-flex flex-column flex-sm-row align-items-sm-center gap-2 py-3">
-            <div class="flex-grow-1 min-width-0">
-              <div class="fw-semibold text-truncate">{{ event.title }}</div>
-              <div class="small text-body-secondary">
-                <i class="far fa-calendar me-1"></i>{{ event.date | date: 'mediumDate' }}
-                <span class="ms-3">
-                  <i class="fas fa-heart me-1"></i>{{ event.interestedUsers.length }} interested
-                </span>
-              </div>
-            </div>
-
-            @if (confirmDeleteId === event.id) {
-              <div class="d-flex gap-2">
-                <button class="btn btn-sm btn-danger" type="button"
-                        [disabled]="deletingEventId === event.id"
-                        (click)="deleteEvent(event.id)">
-                  {{ deletingEventId === event.id ? 'Deleting…' : 'Confirm delete' }}
-                </button>
-                <button class="btn btn-sm btn-outline-secondary" type="button"
-                        [disabled]="deletingEventId === event.id"
-                        (click)="cancelDeleteEvent()">
-                  Cancel
-                </button>
-              </div>
-            } @else {
-              <button class="btn btn-sm btn-outline-danger" type="button"
-                      [attr.aria-label]="'Delete ' + event.title"
-                      (click)="askDeleteEvent(event.id)">
-                <i class="fas fa-trash me-1"></i>Delete
-              </button>
-            }
-          </li>
-        }
-      </ul>
-    }
-  </section>
-
-  <section aria-labelledby="comments-heading">
-    <h2 id="comments-heading" class="h4 mb-3">Comments to review</h2>
-
-    @if (commentsLoading) {
-      <div class="loading-state">
-        <div class="spinner-border text-primary" role="status"></div>
-        <p class="mt-2 mb-0">Loading…</p>
-      </div>
-    } @else if (commentsError) {
-      <div class="alert alert-warning" role="alert">Comments could not be loaded. {{ commentsError }}</div>
-    } @else if (comments.length === 0) {
-      <div class="empty-state">
-        <i class="fas fa-check-circle"></i>
-        <p>No comments waiting for review.</p>
-      </div>
-    } @else {
-      <div class="d-flex flex-column gap-3">
-        @for (comment of comments; track comment.id) {
-          <div class="card-elevated card">
-            <div class="card-body">
-              <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2 small text-body-secondary">
-                <span><i class="fas fa-user me-1"></i>{{ comment.username || 'Unknown user' }}</span>
-                <span><i class="far fa-clock me-1"></i>{{ comment.date | date: 'medium' }}</span>
-              </div>
-              <p class="mb-3 comment-text">{{ comment.content }}</p>
-              <button class="btn btn-sm btn-outline-success" type="button"
-                      [disabled]="seeingCommentId === comment.id"
-                      (click)="markCommentAsSeen(comment.id)">
-                <i class="fas fa-check me-1"></i>
-                {{ seeingCommentId === comment.id ? 'Saving…' : 'Mark as seen' }}
-              </button>
+      <div class="col">
+        <a class="card card-elevated h-100 text-decoration-none text-reset" routerLink="/admin/invoices">
+          <div class="card-body">
+            <div class="small text-body-secondary">Unpaid total</div>
+            <div class="kpi-value">
+              @if (unpaidTotal.loading) { … } @else if (unpaidTotal.failed) { — } @else {
+                {{ unpaidTotalAmount | currency:'EUR':'symbol':'1.0-0' }}
+              }
             </div>
           </div>
-        }
+        </a>
       </div>
-    }
+      <div class="col">
+        <a class="card card-elevated h-100 text-decoration-none text-reset" routerLink="/admin/invoices">
+          <div class="card-body">
+            <div class="small text-body-secondary">Overdue invoices</div>
+            <div class="kpi-value">{{ overdueInvoices.loading ? '…' : overdueInvoices.failed ? '—' : overdueInvoices.value }}</div>
+          </div>
+        </a>
+      </div>
+      <div class="col">
+        <a class="card card-elevated h-100 text-decoration-none text-reset" routerLink="/admin/events">
+          <div class="card-body">
+            <div class="small text-body-secondary">Upcoming events</div>
+            <div class="kpi-value">{{ upcomingEvents.loading ? '…' : upcomingEvents.failed ? '—' : upcomingEvents.value }}</div>
+          </div>
+        </a>
+      </div>
+    </div>
   </section>
+
+  <section class="mb-5" aria-labelledby="links-heading">
+    <h2 id="links-heading" class="h4 mb-3">Quick links</h2>
+    <div class="d-flex flex-wrap gap-2">
+      <a routerLink="/admin/events/new" class="btn btn-primary"><i class="fas fa-calendar-plus me-1" aria-hidden="true"></i>Create event</a>
+      <a routerLink="/admin/events" class="btn btn-outline-primary">Events</a>
+      <a routerLink="/admin/bins" class="btn btn-outline-primary">Waste bins</a>
+      <a routerLink="/admin/route" class="btn btn-outline-primary">Collection route</a>
+      <a routerLink="/admin/parking" class="btn btn-outline-primary">Parking</a>
+      <a routerLink="/admin/invoices/new" class="btn btn-outline-primary">New invoice</a>
+      <a routerLink="/admin/invoices" class="btn btn-outline-primary">Invoices</a>
+      <a routerLink="/admin/municipality" class="btn btn-outline-primary">Municipality</a>
+      <a routerLink="/admin/users" class="btn btn-outline-primary"><i class="fas fa-users-cog me-1" aria-hidden="true"></i>Users</a>
+      <a routerLink="/admin/audit" class="btn btn-outline-primary">Audit log</a>
+    </div>
+  </section>
+
+  <div class="row g-4 mb-5">
+    <section class="col-lg-6" aria-labelledby="audit-heading">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 id="audit-heading" class="h4 mb-0">Recent activity</h2>
+        <a routerLink="/admin/audit" class="small">View full audit log</a>
+      </div>
+
+      @if (auditLoading) {
+        <div class="loading-state">
+          <div class="spinner-border text-primary" role="status"></div>
+          <p class="mt-2 mb-0">Loading…</p>
+        </div>
+      } @else if (auditError) {
+        <div class="alert alert-warning" role="alert">Activity could not be loaded. {{ auditError }}</div>
+      } @else if (recentAudit.length === 0) {
+        <div class="empty-state">
+          <i class="fas fa-clipboard-list"></i>
+          <p>No admin activity yet.</p>
+        </div>
+      } @else {
+        <div class="table-responsive card-elevated">
+          <table class="table table-sm align-middle mb-0">
+            <caption class="visually-hidden">The last {{ recentAuditCount }} audit entries</caption>
+            <thead>
+              <tr>
+                <th scope="col">When</th>
+                <th scope="col">Who</th>
+                <th scope="col">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (entry of recentAudit; track entry.id) {
+                <tr>
+                  <td class="small text-nowrap">{{ entry.atUtc | date:'short' }}</td>
+                  <td class="small">{{ entry.username || 'System' }}</td>
+                  <td class="small">{{ entry.action }} {{ entry.entityType }}@if (entry.entityId) { #{{ entry.entityId }} }</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+
+    <section class="col-lg-6" aria-labelledby="comments-heading">
+      <h2 id="comments-heading" class="h4 mb-3">Comments to review</h2>
+
+      @if (commentsLoading) {
+        <div class="loading-state">
+          <div class="spinner-border text-primary" role="status"></div>
+          <p class="mt-2 mb-0">Loading…</p>
+        </div>
+      } @else if (commentsError) {
+        <div class="alert alert-warning" role="alert">Comments could not be loaded. {{ commentsError }}</div>
+      } @else if (comments.length === 0) {
+        <div class="empty-state">
+          <i class="fas fa-check-circle"></i>
+          <p>No comments waiting for review.</p>
+        </div>
+      } @else {
+        <div class="d-flex flex-column gap-3">
+          @for (comment of comments; track comment.id) {
+            <div class="card-elevated card">
+              <div class="card-body">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2 small text-body-secondary">
+                  <span><i class="fas fa-user me-1"></i>{{ comment.username || 'Unknown user' }}</span>
+                  <span><i class="far fa-clock me-1"></i>{{ comment.date | date: 'medium' }}</span>
+                </div>
+                <p class="mb-3 comment-text">{{ comment.content }}</p>
+                <button class="btn btn-sm btn-outline-success" type="button"
+                        [disabled]="seeingCommentId === comment.id"
+                        (click)="markCommentAsSeen(comment.id)">
+                  <i class="fas fa-check me-1"></i>
+                  {{ seeingCommentId === comment.id ? 'Saving…' : 'Mark as seen' }}
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </section>
+  </div>
 </div>

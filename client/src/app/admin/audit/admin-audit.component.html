@@ -1,5 +1,46 @@
 <div class="page">
   <header class="page-header">
     <h1 class="page-title">Audit log</h1>
+    <p class="page-subtitle">The latest {{ pageSize }} admin actions, newest first.</p>
   </header>
+
+  @if (loading) {
+    <div class="loading-state">
+      <div class="spinner-border text-primary" role="status"></div>
+      <p class="mt-2 mb-0">Loading…</p>
+    </div>
+  } @else if (loadError) {
+    <div class="alert alert-danger" role="alert">The audit log is unavailable right now. {{ loadError }}</div>
+  } @else if (entries.length === 0) {
+    <div class="empty-state">
+      <i class="fas fa-clipboard-list"></i>
+      <p>No admin actions have been recorded yet.</p>
+    </div>
+  } @else {
+    <div class="table-responsive card-elevated">
+      <table class="table table-hover align-middle mb-0">
+        <caption class="visually-hidden">Audit entries, newest first</caption>
+        <thead>
+          <tr>
+            <th scope="col">When</th>
+            <th scope="col">User</th>
+            <th scope="col">Action</th>
+            <th scope="col">Item</th>
+            <th scope="col">Details</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (entry of entries; track entry.id) {
+            <tr>
+              <td class="small text-nowrap">{{ entry.atUtc | date:'medium' }}</td>
+              <td>{{ entry.username || 'System' }}</td>
+              <td>{{ entry.action }}</td>
+              <td class="small">{{ entry.entityType }}@if (entry.entityId) { <span class="font-monospace"> #{{ entry.entityId }}</span> }</td>
+              <td class="small text-break">{{ entry.details || '—' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
 </div>

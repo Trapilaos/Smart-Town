@@ -1,10 +1,22 @@
 import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
-import { EventService } from '../../_services/event.service';
-import { CommentService } from '../../_services/comment.service';
 import { ToastrService } from 'ngx-toastr';
-import { Event } from '../../_models/event.model';
+import { CommentService } from '../../_services/comment.service';
+import { AdminDashboardService } from '../../_services/admin-dashboard.service';
+import { InvoiceService } from '../../_services/invoice.service';
+import { TrafficAndParkingService } from '../../_services/traffic-and-parking.service';
 import { Comment } from '../../_models/comment.model';
+import { AuditEntry } from '../../_models/audit.model';
 import { getErrorMessages } from '../../_helpers/api-error';
+
+/** One KPI card. `value` is null while loading or when the source failed. */
+export interface KpiState {
+  loading: boolean;
+  failed: boolean;
+  value: number | null;
+}
+
+const RECENT_AUDIT_COUNT = 10;
+const HIGH_FILL_PERCENT = 80;
 
 @Component({
     selector: 'app-admin-dashboard',
@@ -14,41 +26,95 @@ import { getErrorMessages } from '../../_helpers/api-error';
     standalone: false
 })
 export class AdminDashboardComponent implements OnInit {
-  events: Event[] = [];
+  readonly highFillPercent = HIGH_FILL_PERCENT;
+  readonly recentAuditCount = RECENT_AUDIT_COUNT;
+
+  binsHigh: KpiState = loadingKpi();
+  freeParking: KpiState = loadingKpi();
+  unpaidTotal: KpiState = loadingKpi();
+  overdueInvoices: KpiState = loadingKpi();
+  upcomingEvents: KpiState = loadingKpi();
+
+  /** Unpaid total is money, so it is kept apart from the count KPIs. */
+  unpaidTotalAmount: number | null = null;
+
+  recentAudit: AuditEntry[] = [];
+  auditLoading = true;
+  auditError = '';
+
   comments: Comment[] = [];
-
-  eventsLoading = true;
   commentsLoading = true;
-  eventsError: string | null = null;
   commentsError: string | null = null;
-
-  /** Event waiting for a second click on "Delete". */
-  confirmDeleteId: number | null = null;
-  deletingEventId: number | null = null;
   seeingCommentId: number | null = null;
 
   constructor(
-    private eventService: EventService,
+    private dashboard: AdminDashboardService,
+    private parkingService: TrafficAndParkingService,
+    private invoiceService: InvoiceService,
     private commentService: CommentService,
     private toastr: ToastrService
-  ) { }
+  ) {}
 
   ngOnInit(): void {
-    this.loadEvents();
+    this.loadBins();
+    this.loadParking();
+    this.loadInvoiceSummary();
+    this.loadUpcomingEvents();
+    this.loadAudit();
     this.loadComments();
   }
 
-  loadEvents(): void {
-    this.eventsLoading = true;
-    this.eventsError = null;
-    this.eventService.getEvents().subscribe({
-      next: (data) => {
-        this.events = data;
-        this.eventsLoading = false;
+  loadBins(): void {
+    this.binsHigh = loadingKpi();
+    this.dashboard.getBins().subscribe({
+      next: bins => this.binsHigh = doneKpi(bins.filter(bin => bin.fillPercent >= HIGH_FILL_PERCENT).length),
+      error: () => this.binsHigh = failedKpi()
+    });
+  }
+
+  loadParking(): void {
+    this.freeParking = loadingKpi();
+    this.parkingService.getParkingSpaces().subscribe({
+      next: spaces => this.freeParking = doneKpi(spaces.reduce((total, space) => total + space.freeNow, 0)),
+      error: () => this.freeParking = failedKpi()
+    });
+  }
+
+  loadInvoiceSummary(): void {
+    this.unpaidTotal = loadingKpi();
+    this.overdueInvoices = loadingKpi();
+    this.invoiceService.getSummary().subscribe({
+      next: summary => {
+        this.unpaidTotalAmount = summary.unpaidTotal;
+        this.unpaidTotal = doneKpi(summary.unpaidTotal);
+        this.overdueInvoices = doneKpi(summary.overdueCount);
       },
-      error: (error) => {
-        this.eventsError = getErrorMessages(error)[0];
-        this.eventsLoading = false;
+      error: () => {
+        this.unpaidTotal = failedKpi();
+        this.overdueInvoices = failedKpi();
+      }
+    });
+  }
+
+  loadUpcomingEvents(): void {
+    this.upcomingEvents = loadingKpi();
+    this.dashboard.getUpcomingEventCount().subscribe({
+      next: count => this.upcomingEvents = doneKpi(count),
+      error: () => this.upcomingEvents = failedKpi()
+    });
+  }
+
+  loadAudit(): void {
+    this.auditLoading = true;
+    this.auditError = '';
+    this.dashboard.getAudit(RECENT_AUDIT_COUNT).subscribe({
+      next: entries => {
+        this.recentAudit = entries;
+        this.auditLoading = false;
+      },
+      error: error => {
+        this.auditError = getErrorMessages(error)[0];
+        this.auditLoading = false;
       }
     });
   }
@@ -57,37 +123,13 @@ export class AdminDashboardComponent implements OnInit {
     this.commentsLoading = true;
     this.commentsError = null;
     this.commentService.getComments().subscribe({
-      next: (data) => {
+      next: data => {
         this.comments = data;
         this.commentsLoading = false;
       },
-      error: (error) => {
+      error: error => {
         this.commentsError = getErrorMessages(error)[0];
         this.commentsLoading = false;
-      }
-    });
-  }
-
-  askDeleteEvent(eventId: number): void {
-    this.confirmDeleteId = eventId;
-  }
-
-  cancelDeleteEvent(): void {
-    this.confirmDeleteId = null;
-  }
-
-  deleteEvent(eventId: number): void {
-    this.deletingEventId = eventId;
-    this.eventService.deleteEvent(eventId).subscribe({
-      next: () => {
-        this.events = this.events.filter(e => e.id !== eventId);
-        this.confirmDeleteId = null;
-        this.deletingEventId = null;
-        this.toastr.success('Event deleted successfully');
-      },
-      error: () => {
-        // the ErrorInterceptor already shows the server message
-        this.deletingEventId = null;
       }
     });
   }
@@ -106,4 +148,16 @@ export class AdminDashboardComponent implements OnInit {
       }
     });
   }
+}
+
+function loadingKpi(): KpiState {
+  return { loading: true, failed: false, value: null };
+}
+
+function doneKpi(value: number): KpiState {
+  return { loading: false, failed: false, value };
+}
+
+function failedKpi(): KpiState {
+  return { loading: false, failed: true, value: null };
 }

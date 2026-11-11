@@ -1,0 +1,6 @@
+@media print {
+  .receipt {
+    border: 1px solid #000;
+    box-shadow: none;
+  }
+}

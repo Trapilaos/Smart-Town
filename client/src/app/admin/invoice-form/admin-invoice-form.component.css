@@ -1,0 +1,25 @@
+.bill {
+  max-width: 44rem;
+}
+
+.payment-code-box {
+  border: 2px dashed currentColor;
+  border-radius: 0.5rem;
+}
+
+.payment-code {
+  font-size: 1.75rem;
+  letter-spacing: 0.25em;
+}
+
+@media print {
+  .bill {
+    border: 1px solid #000;
+    box-shadow: none;
+    max-width: none;
+  }
+
+  .payment-code {
+    font-size: 1.5rem;
+  }
+}
