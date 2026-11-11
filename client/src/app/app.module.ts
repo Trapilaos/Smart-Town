@@ -71,8 +71,10 @@ import { AdminAuditComponent } from './admin/audit/admin-audit.component';
         BrowserAnimationsModule,
         FormsModule,
         SharedModule], providers: [
-        { provide: HTTP_INTERCEPTORS, useClass: ErrorInterceptor, multi: true },
+        // JwtInterceptor must be registered first: it runs outside ErrorInterceptor, so the
+        // error handler sees the Authorization header on requests that carried one.
         { provide: HTTP_INTERCEPTORS, useClass: JwtInterceptor, multi: true },
+        { provide: HTTP_INTERCEPTORS, useClass: ErrorInterceptor, multi: true },
         provideHttpClient(withXhr(), withInterceptorsFromDi())
     ] })
 export class AppModule { }
