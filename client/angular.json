@@ -21,6 +21,9 @@
               "zone.js"
             ],
             "tsConfig": "tsconfig.app.json",
+            "allowedCommonJsDependencies": [
+              "leaflet"
+            ],
             "assets": [
               "src/favicon.ico",
               "src/assets"

@@ -75,3 +75,41 @@ body {
 .text-on-warning {
     color: #212529 !important;
 }
+
+/* Map markers: Leaflet divIcons are built outside any component template, so they are styled here. */
+.app-map-marker {
+    background: none;
+    border: 0;
+}
+
+.app-map-marker__dot {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+    color: #fff;
+    font-size: 13px;
+    transition: transform 0.15s ease-in-out;
+}
+
+.app-map-marker--selected .app-map-marker__dot {
+    transform: scale(1.25);
+    box-shadow: 0 0 0 3px #0d6efd;
+}
+
+/* Print: the route page prints its stop list and map without the chrome. */
+@media print {
+    .navbar,
+    .app-footer,
+    .no-print {
+        display: none !important;
+    }
+
+    .page {
+        padding: 0;
+    }
+}
