@@ -3,6 +3,14 @@ import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http'
 import { environment } from '../../environments/environment';
 import { catchError, Observable, throwError } from 'rxjs';
 
+// Mirrors API/DTOs/LightingStatusDTO.cs (status is "On" or "Off").
+export interface LightingStatus {
+  status: string;
+  brightness: string | null;
+  nextOnTime: string | null;
+  nextOffTime: string | null;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -11,20 +19,17 @@ export class LightingService {
 
   constructor(private http: HttpClient) { }
 
-  getLightingStatus(town: string): Observable<any> {
-    return this.http.get<any>(this.apiUrl, { params: new HttpParams().set('town', town) }).pipe(
+  getLightingStatus(town: string): Observable<LightingStatus> {
+    return this.http.get<LightingStatus>(this.apiUrl, { params: new HttpParams().set('town', town) }).pipe(
       catchError(this.handleError)
     );
   }
 
   private handleError(error: HttpErrorResponse): Observable<never> {
-    let errorMessage = 'Unknown error!';
-    if (error.error instanceof ErrorEvent) {
-      errorMessage = `Client-side error: ${error.error.message}`;
-    } else {
-      errorMessage = `Server-side error: ${error.status} ${error.message}`;
-    }
-    console.error(errorMessage);
+    const details = error.error instanceof ErrorEvent
+      ? `Client-side error: ${error.error.message}`
+      : `Server-side error: ${error.status} ${error.message}`;
+    console.error(details);
     return throwError(() => new Error('There was a problem retrieving lighting status; please try again later.'));
   }
 }

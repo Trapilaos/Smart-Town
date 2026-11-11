@@ -1,5 +1,5 @@
 import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
-import { LightingService } from '../_services/lighting.service';
+import { LightingService, LightingStatus } from '../_services/lighting.service';
 
 @Component({
     selector: 'app-lighting',
@@ -9,32 +9,37 @@ import { LightingService } from '../_services/lighting.service';
     standalone: false
 })
 export class LightingComponent implements OnInit {
-  statusMessage: string = 'Checking...';
-  lightingStatus: string = 'Unknown';
-  brightnessLevel: string = '';
-  nextOnTime: string | null = null;
-  nextOffTime: string | null = null;
+  town = 'Glyfada, Athens';
+  status: LightingStatus | null = null;
+  loading = false;
+  error = '';
 
   constructor(private lightingService: LightingService) {}
 
-  ngOnInit() {
+  ngOnInit(): void {
     this.checkLightingStatus();
   }
 
-  checkLightingStatus() {
-    this.lightingService.getLightingStatus('Glyfada,Athens').subscribe({
+  get isOn(): boolean {
+    return this.status?.status?.toLowerCase() === 'on';
+  }
+
+  checkLightingStatus(): void {
+    const town = this.town.trim();
+    if (!town || this.loading) return;
+
+    this.loading = true;
+    this.error = '';
+    this.lightingService.getLightingStatus(town).subscribe({
       next: (response) => {
-        this.lightingStatus = response.status;
-        this.brightnessLevel = response.brightness;
-        this.nextOnTime = response.nextOnTime;
-        this.nextOffTime = response.nextOffTime;
-        this.statusMessage = this.brightnessLevel 
-          ? `Lights are ${this.lightingStatus} at ${this.brightnessLevel} brightness`
-          : `Lights are ${this.lightingStatus}`;
+        this.status = response;
+        this.loading = false;
       },
-      error: (error) => {
-        this.statusMessage = 'Error fetching lighting status: ' + error.message;
-        console.error(error);
+      error: () => {
+        // Shown inline instead of navigating to an error page.
+        this.status = null;
+        this.error = 'Lighting data is unavailable right now.';
+        this.loading = false;
       }
     });
   }

@@ -1,40 +1,66 @@
-<div class="container mt-5">
+<div class="page">
+  <header class="page-header">
+    <h1 class="page-title">Smart lighting</h1>
+    <p class="page-subtitle">Street lighting status and schedule for your town.</p>
+  </header>
+
   <div class="row justify-content-center">
-    <div class="col-md-10">
-      <div class="card shadow-lg">
-        <div class="card-header bg-success text-white text-center">
-          <h2><i class="fas fa-lightbulb"></i> Smart Lighting </h2>
+    <div class="col-md-10 col-lg-8">
+      <form class="card card-elevated mb-4" (ngSubmit)="checkLightingStatus()">
+        <div class="card-body">
+          <label for="town" class="form-label fw-semibold">Town</label>
+          <div class="input-group">
+            <input id="town" name="town" type="text" class="form-control" autocomplete="off"
+              [(ngModel)]="town">
+            <button type="submit" class="btn btn-primary" [disabled]="loading || !town.trim()">
+              <i class="fas fa-search"></i> Check
+            </button>
+          </div>
         </div>
-        <div class="card-body text-center">
-          @if (statusMessage === 'Checking...') {
-            <div class="spinner-border text-success" role="status">
-              <span class="sr-only">Loading...</span>
+      </form>
+
+      @if (loading) {
+        <div class="loading-state">
+          <div class="spinner-border text-primary" role="status"></div>
+          <p class="mt-2 mb-0">Checking lighting…</p>
+        </div>
+      } @else if (error) {
+        <div class="alert alert-warning" role="alert">
+          <i class="fas fa-exclamation-triangle"></i> {{ error }}
+        </div>
+      } @else if (status) {
+        <article class="card card-elevated" aria-live="polite">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center gap-3 mb-3">
+              <div class="d-flex align-items-center gap-3">
+                <i class="fas fa-lightbulb fa-2x" [class.text-warning]="isOn" [class.text-muted]="!isOn" aria-hidden="true"></i>
+                <div>
+                  <p class="small text-muted mb-0">Street lights in {{ town }}</p>
+                  <h2 class="h4 mb-0">{{ isOn ? 'On' : 'Off' }}</h2>
+                </div>
+              </div>
+              <span class="badge fs-6" [ngClass]="isOn ? 'bg-warning text-dark' : 'bg-secondary'">
+                {{ isOn ? 'Lights on' : 'Lights off' }}
+              </span>
             </div>
-          }
-          @if (statusMessage !== 'Checking...') {
-            <p>
-              <i class="fas"
-              [ngClass]="{'fa-lightbulb-slash': lightingStatus === 'Lights Off', 'fa-lightbulb': lightingStatus === 'Lights On'}"></i>
-              <strong>Lighting Status:</strong> {{ statusMessage }}
-            </p>
-          }
-          @if (brightnessLevel && lightingStatus === 'Lights On') {
-            <p>
-              <i class="fas fa-sliders-h"></i> <strong>Brightness Level:</strong> {{ brightnessLevel }}
-            </p>
-          }
-          @if (nextOnTime) {
-            <p>
-              <i class="fas fa-clock"></i> <strong>Lights will turn on at:</strong> {{ nextOnTime | date: 'shortTime' }}
-            </p>
-          }
-          @if (nextOffTime) {
-            <p>
-              <i class="fas fa-clock"></i> <strong>Lights will turn off at:</strong> {{ nextOffTime | date: 'shortTime' }}
-            </p>
-          }
-        </div>
-      </div>
+
+            <dl class="row mb-0">
+              @if (isOn && status.brightness) {
+                <dt class="col-sm-5">Brightness</dt>
+                <dd class="col-sm-7">{{ status.brightness }}</dd>
+              }
+              @if (status.nextOnTime) {
+                <dt class="col-sm-5"><i class="fas fa-clock"></i> Lights on at</dt>
+                <dd class="col-sm-7">{{ status.nextOnTime | date:'shortTime' }}</dd>
+              }
+              @if (status.nextOffTime) {
+                <dt class="col-sm-5"><i class="fas fa-clock"></i> Lights off at</dt>
+                <dd class="col-sm-7">{{ status.nextOffTime | date:'shortTime' }}</dd>
+              }
+            </dl>
+          </div>
+        </article>
+      }
     </div>
   </div>
 </div>
