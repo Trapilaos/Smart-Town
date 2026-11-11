@@ -1,15 +1,23 @@
-<h4>Internal Server Error - refreshing the page will make the error disappear</h4>
-@if (error) {
-  <h5 class="text-danger">Error: {{error.message}}</h5>
-  <p class="font-weight-bold">Note: If you are seeing this then angular is probably not to blame</p>
-  <p>What to do next?</p>
-  <ol>
-    <li>Open chrome dev tools! Then check the failing request in the network tab!</li>
-    <li>Examine the request URL - what API endpoint are you requesting?</li>
-    <li>Reproduce the problem in Postman - if we get the same error Angular is 100% not the problem</li>
-  </ol>
-  <p style="font-weight: bold;">Following is the stack trace - the first few lines will tell you which type of code caused the issue in the API</p>
-  <code class="mt-5" style="background-color: whitesmoke;">
-    {{error.details}}
-  </code>
-}
+<div class="page">
+  <div class="row justify-content-center">
+    <div class="col-12 col-md-8 col-lg-6">
+      <div class="card card-elevated text-center p-4 p-md-5">
+        <div class="card-body">
+          <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3" aria-hidden="true"></i>
+          <h1 class="page-title">Something went wrong</h1>
+          <p class="page-subtitle mb-4">We hit a problem on our side. Please try again in a moment.</p>
+          <button type="button" class="btn btn-primary" routerLink="/">
+            <i class="fas fa-home" aria-hidden="true"></i> Back to home
+          </button>
+
+          @if (showDetails && error) {
+            <div class="text-start mt-4">
+              <p class="fw-bold text-danger mb-2">Error: {{ error.message }}</p>
+              <pre class="bg-light p-3 rounded small mb-0" style="white-space: pre-wrap;">{{ error.details }}</pre>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

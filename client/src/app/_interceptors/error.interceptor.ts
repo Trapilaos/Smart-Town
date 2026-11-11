@@ -1,14 +1,18 @@
 import { Injectable } from '@angular/core';
 import { HttpRequest, HttpHandler, HttpEvent, HttpInterceptor, HttpErrorResponse } from '@angular/common/http';
 import { Observable, catchError, throwError } from 'rxjs';
-import { NavigationExtras, Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import { getErrorMessages, SKIP_ERROR_TOAST } from '../_helpers/api-error';
 
+/**
+ * Shows a toast for common API errors and rethrows every error so the calling
+ * component can decide what else to show. Never navigates: a 404 may simply mean
+ * "nothing here yet", and the component knows best how to present that.
+ */
 @Injectable()
 export class ErrorInterceptor implements HttpInterceptor {
 
-  constructor(private router: Router, private toastr: ToastrService) {}
+  constructor(private toastr: ToastrService) {}
 
   intercept(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
     const skipToast = request.context.get(SKIP_ERROR_TOAST);
@@ -34,11 +38,10 @@ export class ErrorInterceptor implements HttpInterceptor {
               this.toastr.error('You do not have permission to do that', error.status.toString());
               break;
             case 404:
-              this.router.navigateByUrl('/not-found');
+              // Not an error page: the component decides what an empty result looks like.
               break;
             case 500:
-              const navigationExtras: NavigationExtras = { state: { error: error.error } };
-              this.router.navigateByUrl('/server-error', navigationExtras);
+              this.toastr.error('Something went wrong on our side. Please try again.');
               break;
             default:
               this.toastr.error('Something unexpected went wrong!');

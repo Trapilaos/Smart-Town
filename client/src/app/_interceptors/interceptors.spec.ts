@@ -149,23 +149,25 @@ describe('ErrorInterceptor', () => {
     expect(error.status).toBe(400);
   });
 
-  it('redirects to /not-found on 404 and rethrows', () => {
+  it('does not toast or navigate on 404, and rethrows so the component can decide', () => {
     let error: any;
     http.get('/api/missing').subscribe({ error: e => (error = e) });
 
     controller.expectOne('/api/missing').flush('', { status: 404, statusText: 'Not Found' });
 
-    expect(router.navigateByUrl).toHaveBeenCalledWith('/not-found');
+    expect(toastr.error).not.toHaveBeenCalled();
+    expect(router.navigateByUrl).not.toHaveBeenCalled();
     expect(error.status).toBe(404);
   });
 
-  it('redirects to /server-error on 500 and rethrows', () => {
+  it('toasts a friendly message on 500, does not navigate, and rethrows', () => {
     let error: any;
     http.get('/api/boom').subscribe({ error: e => (error = e) });
 
     controller.expectOne('/api/boom').flush({ message: 'x' }, { status: 500, statusText: 'Server Error' });
 
-    expect(router.navigateByUrl.calls.mostRecent().args[0]).toBe('/server-error');
+    expect(toastr.error).toHaveBeenCalledWith('Something went wrong on our side. Please try again.');
+    expect(router.navigateByUrl).not.toHaveBeenCalled();
     expect(error.status).toBe(500);
   });
 });
