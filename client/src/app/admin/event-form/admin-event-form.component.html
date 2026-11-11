@@ -1,5 +1,150 @@
 <div class="page">
   <header class="page-header">
-    <h1 class="page-title">Event</h1>
+    <p class="small mb-1"><a routerLink="/admin/events"><i class="fas fa-arrow-left"></i> All events</a></p>
+    <h1 class="page-title">{{ isEdit ? 'Edit event' : 'New event' }}</h1>
+    <p class="page-subtitle">Times are Athens local time. Unpublished events are only visible to admins.</p>
   </header>
+
+  @if (loading) {
+    <div class="loading-state">
+      <div class="spinner-border text-primary" role="status"></div>
+      <p class="mt-2 mb-0">Loading…</p>
+    </div>
+  } @else if (loadError) {
+    <div class="alert alert-danger" role="alert">{{ loadError }}</div>
+  } @else {
+    <form name="eventForm" novalidate (ngSubmit)="save()" class="row g-4">
+      <div class="col-lg-7">
+        <section class="card card-elevated">
+          <div class="card-body">
+            <div class="mb-3">
+              <label for="event-title" class="form-label">Title <span class="text-danger">*</span></label>
+              <input id="event-title" name="title" type="text" maxlength="200" class="form-control"
+                [class.is-invalid]="attempted && errors.title" [(ngModel)]="model.title"
+                aria-describedby="event-title-error">
+              @if (attempted && errors.title) {
+                <div id="event-title-error" class="invalid-feedback d-block">{{ errors.title }}</div>
+              }
+            </div>
+
+            <div class="row g-3 mb-3">
+              <div class="col-md-6">
+                <label for="event-category" class="form-label">Category <span class="text-danger">*</span></label>
+                <select id="event-category" name="category" class="form-select"
+                  [class.is-invalid]="attempted && errors.category" [(ngModel)]="model.category"
+                  aria-describedby="event-category-error">
+                  <option value="" disabled>Choose a category</option>
+                  @for (category of categories; track category) {
+                    <option [value]="category">{{ category }}</option>
+                  }
+                </select>
+                @if (attempted && errors.category) {
+                  <div id="event-category-error" class="invalid-feedback d-block">{{ errors.category }}</div>
+                }
+              </div>
+              <div class="col-md-6">
+                <label for="event-location" class="form-label">Location</label>
+                <input id="event-location" name="location" type="text" maxlength="200" class="form-control"
+                  [class.is-invalid]="attempted && errors.location" [(ngModel)]="model.location"
+                  placeholder="For example, Town Hall square">
+                @if (attempted && errors.location) {
+                  <div class="invalid-feedback d-block">{{ errors.location }}</div>
+                }
+              </div>
+            </div>
+
+            <div class="row g-3 mb-3">
+              <div class="col-md-6">
+                <label for="event-start" class="form-label">Starts <span class="text-danger">*</span></label>
+                <input id="event-start" name="date" type="datetime-local" class="form-control"
+                  [class.is-invalid]="attempted && errors.date" [(ngModel)]="model.date"
+                  aria-describedby="event-start-error">
+                @if (attempted && errors.date) {
+                  <div id="event-start-error" class="invalid-feedback d-block">{{ errors.date }}</div>
+                }
+              </div>
+              <div class="col-md-6">
+                <label for="event-end" class="form-label">Ends</label>
+                <input id="event-end" name="endDate" type="datetime-local" class="form-control"
+                  [class.is-invalid]="attempted && errors.endDate" [(ngModel)]="model.endDate"
+                  aria-describedby="event-end-error">
+                @if (attempted && errors.endDate) {
+                  <div id="event-end-error" class="invalid-feedback d-block">{{ errors.endDate }}</div>
+                }
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label for="event-description" class="form-label">Description</label>
+              <textarea id="event-description" name="description" rows="5" class="form-control"
+                [(ngModel)]="model.description"></textarea>
+            </div>
+
+            <div class="mb-3">
+              <label for="event-photo" class="form-label">Photo address</label>
+              <input id="event-photo" name="photoUrl" type="url" class="form-control"
+                [class.is-invalid]="attempted && errors.photoUrl" [(ngModel)]="model.photoUrl"
+                placeholder="https://" aria-describedby="event-photo-help event-photo-error">
+              <div id="event-photo-help" class="form-text">Optional. Must be a full https:// link.</div>
+              @if (attempted && errors.photoUrl) {
+                <div id="event-photo-error" class="invalid-feedback d-block">{{ errors.photoUrl }}</div>
+              }
+            </div>
+
+            <div class="form-check form-switch">
+              <input id="event-published" name="isPublished" type="checkbox" class="form-check-input"
+                role="switch" [(ngModel)]="model.isPublished">
+              <label for="event-published" class="form-check-label">Published (visible on the public events page)</label>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div class="col-lg-5">
+        <section class="card card-elevated" aria-labelledby="location-heading">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <h2 id="location-heading" class="h6 mb-0">Map location</h2>
+              <button type="button" class="btn btn-outline-secondary btn-sm"
+                [disabled]="model.lat === null && model.lng === null"
+                (click)="clearLocation()">Clear location</button>
+            </div>
+            <p class="small text-muted mb-2">
+              @if (model.lat !== null && model.lng !== null) {
+                Picked: {{ model.lat | number: '1.5-5' }}, {{ model.lng | number: '1.5-5' }}
+              } @else {
+                Click the map to pick the event's location (optional).
+              }
+            </p>
+            @if (attempted && errors.coordinates) {
+              <div class="alert alert-danger py-2 small" role="alert">{{ errors.coordinates }}</div>
+            }
+            <app-map [markers]="markers" [editable]="true" (mapClick)="onMapClick($event)" height="340px"></app-map>
+          </div>
+        </section>
+      </div>
+
+      @if (serverErrors.length > 0) {
+        <div class="col-12">
+          <div class="alert alert-danger mb-0" role="alert">
+            @for (message of serverErrors; track $index) {
+              <div>{{ message }}</div>
+            }
+          </div>
+        </div>
+      }
+
+      <div class="col-12 d-flex flex-wrap gap-2 justify-content-end">
+        <a routerLink="/admin/events" class="btn btn-outline-secondary">Cancel</a>
+        <button type="submit" class="btn btn-primary" [disabled]="saving">
+          @if (saving) {
+            <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+            Saving…
+          } @else {
+            {{ isEdit ? 'Save changes' : 'Create event' }}
+          }
+        </button>
+      </div>
+    </form>
+  }
 </div>

@@ -1,5 +1,93 @@
 <div class="page">
-  <header class="page-header">
-    <h1 class="page-title">Manage events</h1>
+  <header class="page-header d-flex flex-wrap justify-content-between align-items-end gap-2">
+    <div>
+      <h1 class="page-title">Manage events</h1>
+      <p class="page-subtitle">Unpublished events are only visible here.</p>
+    </div>
+    <a routerLink="/admin/events/new" class="btn btn-primary"><i class="fas fa-plus"></i> New event</a>
   </header>
+
+  @if (loading) {
+    <div class="loading-state">
+      <div class="spinner-border text-primary" role="status"></div>
+      <p class="mt-2 mb-0">Loading…</p>
+    </div>
+  } @else if (loadError) {
+    <div class="alert alert-danger" role="alert">Events could not be loaded. {{ loadError }}</div>
+  } @else if (events.length === 0) {
+    <div class="empty-state">
+      <i class="fas fa-calendar-plus"></i>
+      <p>No events yet. Create one to get the community started.</p>
+      <a routerLink="/admin/events/new" class="btn btn-outline-primary btn-sm">Create event</a>
+    </div>
+  } @else {
+    <div class="table-responsive card card-elevated">
+      <table class="table table-hover align-middle mb-0">
+        <caption class="visually-hidden">All events, published or not</caption>
+        <thead>
+          <tr>
+            <th scope="col">Title</th>
+            <th scope="col">Date (Athens)</th>
+            <th scope="col">Category</th>
+            <th scope="col" class="text-end">Interested</th>
+            <th scope="col">Published</th>
+            <th scope="col" class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (event of events; track event.id) {
+            <tr>
+              <td>
+                <div class="fw-semibold">{{ event.title }}</div>
+                @if (event.location) {
+                  <div class="small text-muted">{{ event.location }}</div>
+                }
+              </td>
+              <td class="text-nowrap small">
+                {{ event.date | date: 'EEE d MMM y, HH:mm':'Europe/Athens' }}
+              </td>
+              <td><span class="badge text-bg-light border">{{ event.category }}</span></td>
+              <td class="text-end">{{ event.interestedCount }}</td>
+              <td>
+                <div class="form-check form-switch mb-0">
+                  <input class="form-check-input" type="checkbox" role="switch"
+                    [id]="'publish-' + event.id"
+                    [checked]="event.isPublished"
+                    [disabled]="togglingId === event.id"
+                    [attr.aria-label]="'Published: ' + event.title"
+                    (change)="togglePublished(event)">
+                  <label class="form-check-label small" [for]="'publish-' + event.id">
+                    {{ event.isPublished ? 'Published' : 'Hidden' }}
+                  </label>
+                </div>
+              </td>
+              <td class="text-end text-nowrap">
+                @if (confirmDeleteId === event.id) {
+                  <span class="small me-2">Delete this event?</span>
+                  <button type="button" class="btn btn-danger btn-sm me-1"
+                    [disabled]="deletingId === event.id"
+                    (click)="delete(event)">
+                    {{ deletingId === event.id ? 'Deleting…' : 'Confirm delete' }}
+                  </button>
+                  <button type="button" class="btn btn-outline-secondary btn-sm"
+                    [disabled]="deletingId === event.id"
+                    (click)="cancelDelete()">Cancel</button>
+                } @else {
+                  <a [routerLink]="['/admin/events', event.id, 'edit']" class="btn btn-outline-primary btn-sm me-1"
+                    [attr.aria-label]="'Edit ' + event.title">
+                    <i class="fas fa-pen"></i> Edit
+                  </a>
+                  <button type="button" class="btn btn-outline-danger btn-sm"
+                    [attr.aria-label]="'Delete ' + event.title"
+                    (click)="askDelete(event.id)">
+                    <i class="fas fa-trash"></i> Delete
+                  </button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
 </div>
