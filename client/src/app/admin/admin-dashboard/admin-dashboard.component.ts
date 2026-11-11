@@ -45,7 +45,7 @@ export class AdminDashboardComponent implements OnInit {
         this.events = this.events.filter(e => e.id !== eventId);
         this.toastr.success('Event deleted successfully');
       },
-      error: error => this.toastr.error(error.error)
+      error: () => {} // the ErrorInterceptor already shows the server message
     });
   }
 
@@ -55,7 +55,7 @@ export class AdminDashboardComponent implements OnInit {
         this.comments = this.comments.filter(c => c.id !== commentId);
         this.toastr.success('Comment marked as done');
       },
-      error: error => this.toastr.error(error.error)
+      error: () => {} // the ErrorInterceptor already shows the server message
     });
   }
 }

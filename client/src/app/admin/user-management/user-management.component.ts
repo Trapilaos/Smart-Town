@@ -21,7 +21,7 @@ export class UserManagementComponent implements OnInit {
   loadUsersWithRoles() {
     this.adminService.getUsersWithRoles().subscribe({
       next: users => this.users = users,
-      error: error => this.toastr.error(error.error)
+      error: () => {} // the ErrorInterceptor already shows the server message
     });
   }
 
@@ -31,7 +31,7 @@ export class UserManagementComponent implements OnInit {
         this.toastr.success('Roles updated successfully');
         this.loadUsersWithRoles(); // Refresh the user list
       },
-      error: error => this.toastr.error(error.error)
+      error: () => {} // the ErrorInterceptor already shows the server message
     });
   }
 }

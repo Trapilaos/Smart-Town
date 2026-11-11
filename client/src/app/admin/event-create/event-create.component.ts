@@ -28,7 +28,7 @@ export class EventCreateComponent {
         this.toastr.success('Event created successfully');
         this.model = { id: 0, title: '', description: '', photoUrl: '', date: new Date(), interestedUsers: [] }; // Clear the form
       },
-      error: error => this.toastr.error(error.error)
+      error: () => {} // the ErrorInterceptor already shows the server message
     });
   }
 }

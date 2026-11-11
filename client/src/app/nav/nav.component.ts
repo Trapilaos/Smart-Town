@@ -25,7 +25,7 @@ export class NavComponent implements OnInit {
   login() {
     this.accountService.login(this.model).subscribe({
       next: (user: User) => this.redirectUser(user),
-      error: error => this.toastr.error(error.error)
+      error: () => {} // the ErrorInterceptor already shows the server message
     });
   }
 

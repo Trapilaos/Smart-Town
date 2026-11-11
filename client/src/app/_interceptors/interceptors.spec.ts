@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
-import { HTTP_INTERCEPTORS, HttpClient, provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
+import { HTTP_INTERCEPTORS, HttpClient, HttpContext, HttpErrorResponse, provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
+import { SKIP_ERROR_TOAST } from '../_helpers/api-error';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Router } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
@@ -89,12 +90,20 @@ describe('ErrorInterceptor', () => {
 
     controller.expectOne('/api/secret').flush('nope', { status: 401, statusText: 'Unauthorized' });
 
-    expect(toastr.error).toHaveBeenCalledWith('Unauthorized', '401');
+    expect(toastr.error).toHaveBeenCalledWith('nope', '401');
     expect(error.status).toBe(401);
   });
 
-  it('flattens model-state validation errors on 400 and rethrows them', () => {
-    let error: unknown;
+  it('toasts a generic message on 401 when the body is empty', () => {
+    http.get('/api/secret').subscribe({ error: () => {} });
+
+    controller.expectOne('/api/secret').flush('', { status: 401, statusText: 'Unauthorized' });
+
+    expect(toastr.error).toHaveBeenCalledWith('Please log in to continue', '401');
+  });
+
+  it('toasts each model-state validation error on 400 and rethrows the HttpErrorResponse', () => {
+    let error: any;
     http.post('/api/x', {}).subscribe({ error: e => (error = e) });
 
     controller.expectOne('/api/x').flush(
@@ -102,7 +111,42 @@ describe('ErrorInterceptor', () => {
       { status: 400, statusText: 'Bad Request' }
     );
 
-    expect(error).toEqual(['Required', 'Too short', 'Too weak']);
+    expect(toastr.error).toHaveBeenCalledTimes(3);
+    expect(toastr.error).toHaveBeenCalledWith('Required', 'Error');
+    expect(toastr.error).toHaveBeenCalledWith('Too short', 'Error');
+    expect(toastr.error).toHaveBeenCalledWith('Too weak', 'Error');
+    expect(error instanceof HttpErrorResponse).toBeTrue();
+    expect(error.status).toBe(400);
+  });
+
+  it('toasts each Identity error description on 400 and rethrows the HttpErrorResponse', () => {
+    let error: any;
+    http.post('/api/account/register', {}).subscribe({ error: e => (error = e) });
+
+    controller.expectOne('/api/account/register').flush(
+      [
+        { code: 'PasswordRequiresLower', description: "Passwords must have at least one lowercase ('a'-'z')." },
+        { code: 'PasswordRequiresDigit', description: "Passwords must have at least one digit ('0'-'9')." }
+      ],
+      { status: 400, statusText: 'Bad Request' }
+    );
+
+    expect(toastr.error).toHaveBeenCalledTimes(2);
+    expect(toastr.error).toHaveBeenCalledWith("Passwords must have at least one lowercase ('a'-'z').", 'Error');
+    expect(toastr.error).toHaveBeenCalledWith("Passwords must have at least one digit ('0'-'9').", 'Error');
+    expect(error instanceof HttpErrorResponse).toBeTrue();
+    expect(error.status).toBe(400);
+  });
+
+  it('does not toast on 400 when the request sets SKIP_ERROR_TOAST, but still rethrows', () => {
+    let error: any;
+    http.post('/api/account/register', {}, { context: new HttpContext().set(SKIP_ERROR_TOAST, true) })
+      .subscribe({ error: e => (error = e) });
+
+    controller.expectOne('/api/account/register').flush('Username is taken!', { status: 400, statusText: 'Bad Request' });
+
+    expect(toastr.error).not.toHaveBeenCalled();
+    expect(error.status).toBe(400);
   });
 
   it('redirects to /not-found on 404 and rethrows', () => {

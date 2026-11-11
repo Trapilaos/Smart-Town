@@ -1,8 +1,9 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, map } from 'rxjs';
 import { User } from '../_models/user';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { environment } from 'src/environments/environment';
+import { SKIP_ERROR_TOAST } from '../_helpers/api-error';
 
 @Injectable({
   providedIn: 'root'
@@ -26,7 +27,9 @@ export class AccountService {
   }
 
   register(model: any) {
-    return this.http.post<User>(`${this.baseUrl}account/register`, model).pipe(
+    // The register form shows its own errors inline, so suppress the interceptor toast.
+    const context = new HttpContext().set(SKIP_ERROR_TOAST, true);
+    return this.http.post<User>(`${this.baseUrl}account/register`, model, { context }).pipe(
       map((user: User) => {
         if (user) {
           this.setCurrentUser(user);
