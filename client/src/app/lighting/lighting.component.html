@@ -25,7 +25,7 @@
           <p class="mt-2 mb-0">Checking lighting…</p>
         </div>
       } @else if (error) {
-        <div class="alert alert-warning text-dark" role="alert">
+        <div class="alert alert-warning text-on-warning" role="alert">
           <i class="fas fa-exclamation-triangle"></i> {{ error }}
         </div>
       } @else if (status) {
@@ -39,7 +39,7 @@
                   <h2 class="h4 mb-0">{{ isOn ? 'On' : 'Off' }}</h2>
                 </div>
               </div>
-              <span class="badge fs-6" [ngClass]="isOn ? 'bg-warning text-dark' : 'bg-secondary'">
+              <span class="badge fs-6" [ngClass]="isOn ? 'bg-warning text-on-warning' : 'bg-secondary'">
                 {{ isOn ? 'Lights on' : 'Lights off' }}
               </span>
             </div>

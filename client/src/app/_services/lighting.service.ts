@@ -29,6 +29,6 @@ export class LightingService {
   }
 
   private handleError(error: HttpErrorResponse): Observable<never> {
-    return throwError(() => new Error('There was a problem retrieving lighting status; please try again later.'));
+    return throwError(() => error);
   }
 }

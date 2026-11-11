@@ -170,4 +170,15 @@ describe('ErrorInterceptor', () => {
     expect(router.navigateByUrl).not.toHaveBeenCalled();
     expect(error.status).toBe(500);
   });
+
+  it('does not toast on 500 when the request sets SKIP_ERROR_TOAST, but still rethrows', () => {
+    let error: any;
+    http.get('/api/boom', { context: new HttpContext().set(SKIP_ERROR_TOAST, true) })
+      .subscribe({ error: e => (error = e) });
+
+    controller.expectOne('/api/boom').flush({ message: 'x' }, { status: 500, statusText: 'Server Error' });
+
+    expect(toastr.error).not.toHaveBeenCalled();
+    expect(error.status).toBe(500);
+  });
 });

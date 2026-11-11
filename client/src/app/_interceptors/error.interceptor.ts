@@ -35,17 +35,22 @@ export class ErrorInterceptor implements HttpInterceptor {
               }
               break;
             case 403:
-              this.toastr.error('You do not have permission to do that', error.status.toString());
+              if (!skipToast) {
+                this.toastr.error('You do not have permission to do that', error.status.toString());
+              }
               break;
             case 404:
               // Not an error page: the component decides what an empty result looks like.
               break;
             case 500:
-              this.toastr.error('Something went wrong on our side. Please try again.');
+              if (!skipToast) {
+                this.toastr.error('Something went wrong on our side. Please try again.');
+              }
               break;
             default:
-              this.toastr.error('Something unexpected went wrong!');
-              console.log(error);
+              if (!skipToast) {
+                this.toastr.error('Something unexpected went wrong!');
+              }
               break;
           }
         }

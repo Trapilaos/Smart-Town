@@ -70,3 +70,8 @@ body {
     border-radius: var(--bs-card-border-radius, 0.375rem);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
+
+/* Flatly's $dark is grey, so text-dark and text-bg-warning don't give dark text on warning. */
+.text-on-warning {
+    color: #212529 !important;
+}
