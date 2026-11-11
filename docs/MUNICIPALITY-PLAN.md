@@ -38,7 +38,30 @@ Decisions (Opus, defaults the human can override):
 - **`GeoService` (pure, unit-tested):**
   - `IsInside(lat, lng, geometry)`: ray casting, holes respected, MultiPolygon supported.
   - `HaversineMeters`.
-- **Seed:** Glyfada, centre 37.8650, 23.7530, zoom 14. An approximate polygon of about 12–20 vertices around the municipality, with `BoundaryIsApproximate = true`.
+- **Seed:** Glyfada, centre 37.8650, 23.7530, zoom 14. An approximate polygon of about 12–20 vertices around the municipality, with `BoundaryIsApproximate = true`. This is only a fallback.
+- **Automatic boundary from OpenStreetMap** (human decision; it replaces upload as the primary path):
+  - **`BoundaryLookupService`** (typed `HttpClient`, base `https://nominatim.openstreetmap.org/`, 10 s timeout):
+    - Calls `search?q={query}&format=jsonv2&polygon_geojson=1&polygon_threshold=0.0005&limit=5&addressdetails=0`.
+    - Keeps only results with `category`/`class` = `boundary` and `type` = `administrative`, and a geometry of `Polygon` or `MultiPolygon`.
+    - Returns candidates `{ osmType, osmId, displayName, centerLat, centerLng, geometry }`.
+    - Sends the header `User-Agent: SmartTown-Municipality-Platform/1.0` (generic: **no personal data, email or repo URL**) plus `Accept-Language: en`.
+    - Nominatim policy: at most 1 request per second, so serialise the calls with a `SemaphoreSlim` and a 1 s spacing.
+    - Every candidate geometry goes through the same validation as uploads.
+  - **`POST /api/admin/municipality/boundary/search {query}`** (Admin, rate-limited to 10 per minute) returns the candidates.
+  - **`POST /api/admin/municipality/boundary/apply {osmType, osmId}`** (Admin):
+    - Re-fetches that exact object via `lookup?osm_ids={N|W|R}{id}&format=jsonv2&polygon_geojson=1&polygon_threshold=0.0005`.
+    - Validates it, saves the boundary and centre, sets `BoundaryIsApproximate = false`, and stores `BoundarySource = "OpenStreetMap relation {id}"` and `BoundaryFetchedAt`. Audited.
+  - **First startup:**
+    - If `Municipality:AutoFetchBoundary` is true (the default) and the stored boundary is still approximate, a hosted service tries **once** in the background to fetch `Municipality:BoundaryQuery` (default `"Glyfada, Attica, Greece"`) and applies the best candidate: a relation, preferring the one whose name matches the municipality name.
+    - On any failure it logs a warning and keeps the approximate seed. Startup is never blocked.
+  - The manual paste or upload stays as an advanced fallback on the settings page.
+  - **Tests** use a stubbed `HttpMessageHandler`, never the real network:
+    - candidate filtering
+    - the User-Agent header is present and generic
+    - an invalid or oversized geometry is rejected
+    - a failure leaves the approximate boundary in place
+  - **Entity additions:** `BoundarySource` (string, ≤200) and `BoundaryFetchedAt` (DateTime?).
+  - The bins and parking seeds must stay inside **both** the approximate and the real boundary. Keep the seed points well inside central Glyfada, around 37.855–37.875 lat and 23.745–23.765 lng.
 
 ### 1.2 Waste bins
 - **`WasteBin` adds:**
@@ -205,7 +228,12 @@ Decisions (Opus, defaults the human can override):
     - An Admin dropdown with all admin pages.
 - **F1 pages:**
   - `/waste`: a public bins map with a type filter, a legend, and a fill colour by percentage (status colours).
-  - `/admin/municipality`: a settings form plus a boundary upload (file input or paste) with a live map preview before saving, and a note on how to export the boundary from OpenStreetMap.
+  - `/admin/municipality`:
+    - A settings form.
+    - A **"Find boundary on OpenStreetMap"** search box that lists the candidates (display name). Selecting one previews it on the map, and "Use this boundary" applies it.
+    - A badge showing the source and fetch date, or "Approximate".
+    - A collapsed "Advanced: paste GeoJSON" fallback.
+    - OSM attribution text.
   - `/admin/bins`: a map-click to add a bin, with a side panel form for type, address, capacity and fill. Click a marker to edit, Empty, or Remove (with a confirm). Show the server's outside-boundary error inline.
   - `/admin/route`: type and min-fill filters, then a route polyline on the map plus an ordered stop list, total km, and a print button.
 
