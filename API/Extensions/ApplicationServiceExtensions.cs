@@ -1,5 +1,6 @@
 using API.Data;
 using API.Interfaces;
+using API.Helpers;
 using API.Services;
 using Microsoft.EntityFrameworkCore;
 
@@ -24,7 +25,7 @@ namespace API.Extensions
             services.AddScoped<ICommentService, CommentService>();
             services.AddHttpClient<SmartLightingService>();
             services.AddHostedService<TrafficDataBackgroundService>();
-            services.AddAutoMapper(typeof(MappingProfiles).Assembly);
+            services.AddAutoMapper(typeof(AutoMapperProfiles).Assembly);
 
             return services;
         }
