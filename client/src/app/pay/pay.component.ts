@@ -1,8 +1,12 @@
 import { Component, ChangeDetectionStrategy } from '@angular/core';
-import { PaymentService } from '../_services/payment.service';
+import { HttpErrorResponse } from '@angular/common/http';
+import { PaymentService, InvoiceStatus } from '../_services/payment.service';
 import { Payment } from '../_models/payment.model';
 import { ToastrService } from 'ngx-toastr';
-import { EMPTY, catchError, map, tap } from 'rxjs';
+
+interface CheckedInvoice extends InvoiceStatus {
+  invoiceNumber: string;
+}
 
 @Component({
     selector: 'app-pay',
@@ -12,99 +16,66 @@ import { EMPTY, catchError, map, tap } from 'rxjs';
     standalone: false
 })
 export class PayComponent {
-  payment: Payment = this.initializePayment();
-  paymentStatus: string = '';
-  invoiceChecked: boolean = false;
-  errorMessage: string = '';
-  loading: boolean = false;
+  invoiceNumber = '';
+  invoice: CheckedInvoice | null = null;
+  lookupError = '';
+  checking = false;
+  paying = false;
+  private lookupSubmitted = false;
 
   constructor(private paymentService: PaymentService, private toastr: ToastrService) { }
 
-  initializePayment(): Payment {
-    return {
-      userId: '',
-      invoiceNumber: '',
-      amount: 0,
-      currency: 'EUR',
+  get invoiceError(): string {
+    return this.lookupSubmitted && !this.invoiceNumber.trim() ? 'Enter an invoice number to continue.' : '';
+  }
+
+  checkInvoice(): void {
+    this.lookupSubmitted = true;
+    const number = this.invoiceNumber.trim();
+    if (!number || this.checking) return;
+
+    this.checking = true;
+    this.lookupError = '';
+    this.invoice = null;
+    this.paymentService.checkInvoice(number).subscribe({
+      next: (response) => {
+        this.invoice = { ...response, invoiceNumber: number };
+        this.checking = false;
+      },
+      error: (error: HttpErrorResponse) => {
+        // The interceptor toasts 400/401/403 messages, so the lookup error stays inline.
+        this.lookupError = error.status === 404
+          ? 'We could not find an invoice with that number.'
+          : 'We could not check this invoice. Please try again.';
+        this.checking = false;
+      }
+    });
+  }
+
+  payInvoice(): void {
+    const invoice = this.invoice;
+    if (!invoice || invoice.isPaid || this.paying) return;
+
+    const payment: Payment = {
+      userId: '', // ignored by the server, which uses the authenticated user
+      invoiceNumber: invoice.invoiceNumber,
+      amount: invoice.amount,
+      currency: invoice.currency,
       description: '',
       isPaid: false
     };
-  }
 
-  checkInvoice() {
-    console.log('checkInvoice called');
-    if (!this.payment.invoiceNumber) {
-      this.toastr.error('Please enter an invoice number');
-      return;
-    }
-
-    this.loading = true;
-    this.paymentService.checkInvoice(this.payment.invoiceNumber).pipe(
-      map((response: any) => {
-        if (response.isPaid) {
-          throw new Error('Invoice already paid');
-        }
-        return response;
-      }),
-      tap((response) => {
-        console.log('response:', response);
-        this.invoiceChecked = true;
-        this.paymentStatus = `Invoice amount: ${response.amount} ${response.currency}`;
-        this.payment.amount = response.amount;
-        this.payment.currency = response.currency;
-        this.payment.userId = response.userId;
-        this.errorMessage = '';
-        this.loading = false;
-      }),
-      catchError((error) => {
-        console.log('error:', error);
-        this.handleError(error);
-        return EMPTY;
-      })
-    ).subscribe();
-  }
-
-  processPayment() {
-    if (!this.invoiceChecked) {
-      this.toastr.error('Please check the invoice before paying.');
-      return;
-    }
-
-    this.loading = true;
-    this.paymentService.processPayment(this.payment).pipe(
-      tap((response) => {
+    this.paying = true;
+    this.paymentService.processPayment(payment).subscribe({
+      next: () => {
+        this.paying = false;
+        this.invoice = { ...invoice, isPaid: true };
         this.toastr.success('Payment processed successfully!');
-        this.invoiceChecked = false;
-        this.payment = this.initializePayment();
-        this.errorMessage = '';
-        this.loading = false;
-      }),
-      catchError((error) => {
-        this.handleError(error);
-        return EMPTY;
-      })
-    ).subscribe();
-  }
-
-  handleError(error: any) {
-    console.log('handleError called with:', error);
-    this.loading = false;
-    if (error.status === 404) {
-      this.toastr.error('Invoice not found.');
-      this.errorMessage = 'Invoice not found.';
-    } else if (error.message === 'Invoice already paid') {
-      this.toastr.error('This invoice is already paid.');
-      this.errorMessage = 'This invoice is already paid.';
-    } else {
-      this.toastr.error(error.message || 'Error checking invoice');
-      this.errorMessage = error.message || 'Error checking invoice';
-    }
-
-    this.invoiceChecked = false;
-    this.paymentStatus = '';
-  }
-
-  closeAlert() {
-    this.errorMessage = '';
+      },
+      error: () => {
+        // The interceptor shows the API message for 400/401/403, so only reset the button here.
+        this.paying = false;
+      }
+    });
   }
 }
