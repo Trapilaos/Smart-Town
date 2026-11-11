@@ -77,8 +77,8 @@
               <td class="font-monospace small">{{ invoice.invoiceNumber }}</td>
               <td>
                 {{ invoice.payerName }}
-                @if (invoice.username) {
-                  <div class="small text-muted">{{ invoice.username }}</div>
+                @if (invoice.username && invoice.username !== invoice.payerName) {
+                  <div class="small text-muted">&#64;{{ invoice.username }}</div>
                 }
               </td>
               <td>{{ invoice.description }}</td>
