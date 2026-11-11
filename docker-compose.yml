@@ -1,0 +1,24 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: API/Dockerfile
+    environment:
+      # Required, at least 64 characters. Copy .env.example to .env and set a real value.
+      TokenKey: ${TOKEN_KEY:?Set TOKEN_KEY in .env (copy .env.example)}
+      ConnectionStrings__DefaultConnection: Data Source=/data/smarttown.db
+    volumes:
+      - api-data:/data
+    restart: unless-stopped
+
+  client:
+    build:
+      context: ./client
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  api-data:
