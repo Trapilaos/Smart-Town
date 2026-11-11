@@ -19,10 +19,10 @@
           @if (isAdmin(user)) {
             <li class="nav-item dropdown" dropdown>
               <a class="nav-link dropdown-toggle" role="button" dropdownToggle>Admin</a>
-              <div class="dropdown-menu" *dropdownMenu>
-                <a class="dropdown-item" routerLink="/admin" routerLinkActive="active" (click)="closeMenu()">Dashboard</a>
-                <a class="dropdown-item" routerLink="/admin/create-event" routerLinkActive="active" (click)="closeMenu()">Create Event</a>
-                <a class="dropdown-item" routerLink="/admin/user-management" routerLinkActive="active" (click)="closeMenu()">Manage Users</a>
+              <div class="dropdown-menu" data-bs-theme="light" *dropdownMenu>
+                <a class="dropdown-item" routerLink="/admin" routerLinkActive="active fw-semibold" (click)="closeMenu()">Dashboard</a>
+                <a class="dropdown-item" routerLink="/admin/create-event" routerLinkActive="active fw-semibold" (click)="closeMenu()">Create Event</a>
+                <a class="dropdown-item" routerLink="/admin/user-management" routerLinkActive="active fw-semibold" (click)="closeMenu()">Manage Users</a>
               </div>
             </li>
           }
@@ -32,7 +32,7 @@
           <a class="nav-link text-light dropdown-toggle px-0" role="button" dropdownToggle>
             <i class="fas fa-user-circle" aria-hidden="true"></i> {{ user.username }}
           </a>
-          <div class="dropdown-menu dropdown-menu-end" *dropdownMenu>
+          <div class="dropdown-menu dropdown-menu-end" data-bs-theme="light" *dropdownMenu>
             <h6 class="dropdown-header">Signed in as {{ user.username }}</h6>
             <a class="dropdown-item" role="button" (click)="logout()">Logout</a>
           </div>
