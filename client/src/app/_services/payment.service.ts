@@ -34,7 +34,6 @@ export class PaymentService {
 
   // Rethrow the HttpErrorResponse so callers can tell a 404 (unknown invoice) apart from other failures.
   private handleError(error: HttpErrorResponse) {
-    console.error('Backend returned code', error.status, 'body was:', error.error);
     return throwError(() => error);
   }
 }
