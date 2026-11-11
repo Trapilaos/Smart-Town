@@ -21,7 +21,7 @@ export class ErrorInterceptor implements HttpInterceptor {
         if (error){
           switch (error.status){
             case 400:
-              if (error.error.errors) {
+              if (error.error?.errors) {
                 const modelStateErrors = [];
                 for (const key in error.error.errors) {
                   if (error.error.errors[key]) { 
@@ -30,11 +30,14 @@ export class ErrorInterceptor implements HttpInterceptor {
                 }
                 throw modelStateErrors.flat();
               } else {
-                this.toastr.error(error.error, error.status.toString())
+                this.toastr.error(typeof error.error === 'string' ? error.error : 'Bad request', error.status.toString())
               }
               break;
             case 401:
               this.toastr.error('Unauthorized', error.status.toString());
+              break;
+            case 403:
+              this.toastr.error('You do not have permission to do that', error.status.toString());
               break;
             case 404:
               this.router.navigateByUrl('/not-found');

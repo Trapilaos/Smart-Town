@@ -17,6 +17,7 @@
                 Event</a></li>
             <li class="nav-item"><a class="nav-link" routerLink="/admin/user-management"
                 routerLinkActive="active">Manage Users</a></li>
+            <li class="nav-item"><a class="nav-link" routerLink="/errors" routerLinkActive="active">Errors</a></li>
           </ng-container>
           <ng-template #userLinks>
             <li class="nav-item"><a class="nav-link" routerLink="/member" routerLinkActive="active">Community</a></li>
@@ -26,7 +27,6 @@
             <li class="nav-item"><a class="nav-link" routerLink="/pay" routerLinkActive="active">Payments</a></li>
           </ng-template>
         </ng-container>
-        <li class="nav-item"><a class="nav-link" routerLink="/errors" routerLinkActive="active">Errors</a></li>
       </ul>
 
       <div class="dropdown" *ngIf="(accountService.currentUser$ | async) as user" dropdown>
@@ -34,7 +34,6 @@
           Welcome {{user.username | titlecase}}
         </a>
         <div class="dropdown-menu show" *dropdownMenu>
-          <a class="dropdown-item" routerLink="/profile">Edit Profile</a>
           <a class="dropdown-item" (click)="logout()">Logout</a>
         </div>
       </div>

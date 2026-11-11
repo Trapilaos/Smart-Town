@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
-import { Observable, of } from 'rxjs';
-import { switchMap, catchError, take } from 'rxjs/operators';
+import { Observable } from 'rxjs';
+import { switchMap, take } from 'rxjs/operators';
 import { HttpEvent, HttpHandler, HttpRequest, HttpInterceptor } from '@angular/common/http';
 import { AccountService } from '../_services/account.service';
 
@@ -20,10 +20,6 @@ export class JwtInterceptor implements HttpInterceptor {
           });
         }
         return next.handle(request);
-      }),
-      catchError(error => {
-        // Handle errors if necessary
-        return of(error);
       })
     );
   }

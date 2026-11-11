@@ -54,8 +54,6 @@
                 <div class="mt-4">
                     <button *ngIf="!(accountService.currentUser$ | async)" (click)="registerToggle()"
                         class="btn btn-primary btn-lg me-2"><i class="fas fa-user-plus"></i> Register</button>
-                    <button routerLink="/home/learn-more" class="btn btn-outline-primary btn-lg"><i
-                            class="fas fa-info-circle"></i> Learn More</button>
                 </div>
             </div>
         </div>

@@ -2,14 +2,15 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+import { environment } from 'src/environments/environment';
 import { WasteBin } from '../_models/waste-bin.model';
 
 @Injectable({
   providedIn: 'root'
 })
 export class WasteManagementService {
-  private wasteBinsUrl = 'https://localhost:5001/api/waste';
-  private optimalPathUrl = 'https://localhost:5001/api/waste/optimalpath';
+  private wasteBinsUrl = `${environment.apiUrl}waste`;
+  private optimalPathUrl = `${environment.apiUrl}waste/optimalpath`;
 
   constructor(private http: HttpClient) {}
 

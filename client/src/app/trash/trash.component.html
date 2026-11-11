@@ -26,7 +26,7 @@
             </div>
             <p class="card-text">{{ bin.currentFillLevel }} liters / {{ bin.capacity }} liters</p>
             <p class="card-text">Last Emptied: {{ bin.lastEmptied | date:'short' }}</p>
-            <button class="btn btn-primary btn-block" (click)="emptyBin(bin)">
+            <button *ngIf="isAdmin" class="btn btn-primary btn-block" (click)="emptyBin(bin)">
               <i class="fas fa-trash-restore"></i> Empty Bin
             </button>
           </div>

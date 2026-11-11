@@ -3,7 +3,9 @@ import { Event } from '../_models/event.model';
 import { Comment } from '../_models/comment.model';
 import { EventService } from '../_services/event.service';
 import { CommentService } from '../_services/comment.service';
+import { take } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
+import { AccountService } from '../_services/account.service';
 
 @Component({
   selector: 'app-member',
@@ -14,16 +16,22 @@ export class MemberComponent implements OnInit {
   events: Event[] = [];
   comments: Comment[] = [];
   newCommentContent = '';
+  isAdmin = false;
 
   constructor(
     private eventService: EventService,
     private commentService: CommentService,
-    private toastr: ToastrService
+    private toastr: ToastrService,
+    public accountService: AccountService
   ) { }
 
   ngOnInit(): void {
     this.loadEvents();
-    this.loadComments();
+    // GET /api/comments is Admin-only, so only admins load the list.
+    this.accountService.currentUser$.pipe(take(1)).subscribe(user => {
+      this.isAdmin = !!user?.roles?.includes('Admin');
+      if (this.isAdmin) this.loadComments();
+    });
   }
 
   loadEvents(): void {
@@ -48,13 +56,13 @@ export class MemberComponent implements OnInit {
     const newComment: Comment = {
       id: 0,
       content: this.newCommentContent,
-      userId: 'currentUserId',
+      userId: '', // ignored by the server, which uses the authenticated user
       date: new Date(),
-      seen: false // Make sure seen is set to false
+      seen: false // ignored by the server
     };
 
     this.commentService.addComment(newComment).subscribe(() => {
-      this.loadComments(); // Refresh comments after adding new one
+      if (this.isAdmin) this.loadComments();
       this.newCommentContent = '';
       this.toastr.success('Comment added successfully!');
     });
