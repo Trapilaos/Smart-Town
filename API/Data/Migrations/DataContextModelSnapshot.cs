@@ -15,7 +15,7 @@ namespace API.Data.Migrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "8.0.5");
+            modelBuilder.HasAnnotation("ProductVersion", "10.0.15");
 
             modelBuilder.Entity("API.Entities.AppRole", b =>
                 {
@@ -171,7 +171,7 @@ namespace API.Data.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("InterestedUsers")
+                    b.PrimitiveCollection<string>("InterestedUsers")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("PhotoUrl")
@@ -206,6 +206,58 @@ namespace API.Data.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Invoices");
+                });
+
+            modelBuilder.Entity("API.Entities.Municipality", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("BoundaryFetchedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BoundaryGeoJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("BoundaryIsApproximate")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("BoundarySource")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<double>("CenterLatitude")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("CenterLongitude")
+                        .HasColumnType("REAL");
+
+                    b.Property<int>("DefaultZoom")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("StreetlightCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("StreetlightWatts")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("TimeZoneId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Municipalities");
                 });
 
             modelBuilder.Entity("API.Entities.ParkingSpace", b =>
@@ -308,10 +360,24 @@ namespace API.Data.Migrations
                     b.Property<int>("CurrentFillLevel")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime>("LastEmptied")
                         .HasColumnType("TEXT");
 
+                    b.Property<double>("Latitude")
+                        .HasColumnType("REAL");
+
                     b.Property<string>("Location")
+                        .HasColumnType("TEXT");
+
+                    b.Property<double>("Longitude")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(20)
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
