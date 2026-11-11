@@ -4,6 +4,7 @@
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>disable</Nullable>
+    <UserSecretsId>smart-town-api-8b1f4c2e-5d3a-4e7b-9a60-2f1c7d9e4b35</UserSecretsId>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
