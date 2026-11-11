@@ -1,29 +1,114 @@
-<div class="events-comments-container">
-  <div class="events-container">
-    <h2 class="section-title"><i class="fas fa-calendar-alt"></i> Events</h2>
-    @for (event of events; track event) {
-      <div class="event-card">
-        <h3 class="event-title">{{ event.title }}</h3>
-        <img class="event-photo" [src]="event.photoUrl" alt="{{ event.title }}">
-        <p class="event-description">{{ event.description }}</p>
-        <button class="event-button" (click)="declareInterest(event.id)">
-          <i class="fas fa-heart"></i> I'm Interested
-        </button>
-      </div>
-    }
-  </div>
+<div class="page">
+  <header class="page-header">
+    <h1 class="page-title">Community</h1>
+    <p class="page-subtitle">Upcoming events in Smart-Town, and a place to share your thoughts.</p>
+  </header>
 
-  <div class="comments-container">
-    <h2 class="section-title"><i class="fas fa-comments"></i> Comments</h2>
-    @for (comment of comments; track comment) {
-      <div class="comment">
-        <p class="comment-content">{{ comment.content }}</p>
-        <small class="comment-date">{{ comment.date | date }}</small>
+  <section class="mb-5" aria-labelledby="events-heading">
+    <h2 id="events-heading" class="h4 mb-3"><i class="fas fa-calendar-alt text-primary"></i> Events</h2>
+
+    @if (eventsLoading) {
+      <div class="loading-state">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="mt-2 mb-0">Loading…</p>
+      </div>
+    } @else if (events.length === 0) {
+      <div class="empty-state">
+        <i class="fas fa-calendar-times"></i>
+        <p>No events are scheduled yet. Check back soon.</p>
+      </div>
+    } @else {
+      <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
+        @for (event of events; track event.id) {
+          <div class="col">
+            <article class="card card-elevated h-100">
+              @if (event.photoUrl) {
+                <img class="card-img-top event-photo" [src]="event.photoUrl" [alt]="event.title">
+              }
+              <div class="card-body d-flex flex-column">
+                <p class="small text-muted mb-1">
+                  <i class="fas fa-clock"></i> {{ event.date | date:'EEE d MMM y, HH:mm' }}
+                </p>
+                <h3 class="h5 card-title">{{ event.title }}</h3>
+                <p class="card-text flex-grow-1">{{ event.description }}</p>
+                <div class="d-flex align-items-center justify-content-between gap-2 mt-2">
+                  <span class="small text-muted">
+                    <i class="fas fa-users"></i> {{ event.interestedUsers.length }} interested
+                  </span>
+                  @if (isInterested(event)) {
+                    <button type="button" class="btn btn-success btn-sm" disabled>
+                      <i class="fas fa-check"></i> Interested
+                    </button>
+                  } @else {
+                    <button type="button" class="btn btn-outline-primary btn-sm"
+                      [disabled]="interestPendingEventId === event.id"
+                      (click)="declareInterest(event)">
+                      <i class="fas fa-heart"></i> I'm interested
+                    </button>
+                  }
+                </div>
+              </div>
+            </article>
+          </div>
+        }
       </div>
     }
-    <textarea class="comment-input" [(ngModel)]="newCommentContent" placeholder="Add your comment"></textarea>
-    <button class="comment-button" (click)="addComment()">
-      <i class="fas fa-paper-plane"></i> Submit
-    </button>
-  </div>
+  </section>
+
+  <section aria-labelledby="comments-heading">
+    <h2 id="comments-heading" class="h4 mb-3"><i class="fas fa-comments text-primary"></i> Comments</h2>
+
+    @if (isAdmin) {
+      @if (commentsLoading) {
+        <div class="loading-state">
+          <div class="spinner-border text-primary" role="status"></div>
+          <p class="mt-2 mb-0">Loading…</p>
+        </div>
+      } @else if (comments.length === 0) {
+        <div class="empty-state">
+          <i class="fas fa-inbox"></i>
+          <p>No comments yet.</p>
+        </div>
+      } @else {
+        <div class="vstack gap-3 mb-4">
+          @for (comment of comments; track comment.id) {
+            <div class="card card-elevated">
+              <div class="card-body">
+                <p class="mb-1">{{ comment.content }}</p>
+                <small class="text-muted">{{ comment.date | date:'medium' }}</small>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    }
+
+    <form class="card card-elevated" (ngSubmit)="addComment()">
+      <div class="card-body">
+        <label for="comment-content" class="form-label fw-semibold">Share a comment</label>
+        <textarea id="comment-content" name="content" class="form-control" rows="3"
+          placeholder="What is on your mind?"
+          aria-describedby="comment-counter"
+          [maxlength]="maxCommentLength"
+          [(ngModel)]="newCommentContent"></textarea>
+        <div class="d-flex justify-content-end small mt-1">
+          <span id="comment-counter"
+            [class.text-danger]="newCommentContent.length > maxCommentLength"
+            [class.text-muted]="newCommentContent.length <= maxCommentLength">
+            {{ newCommentContent.length }}/{{ maxCommentLength }}
+          </span>
+        </div>
+        <div class="d-flex justify-content-end mt-3">
+          <button type="submit" class="btn btn-primary" [disabled]="!canSubmitComment()">
+            @if (commentSubmitting) {
+              <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+              Posting…
+            } @else {
+              <i class="fas fa-paper-plane"></i> Post comment
+            }
+          </button>
+        </div>
+      </div>
+    </form>
+  </section>
 </div>

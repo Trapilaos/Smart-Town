@@ -15,10 +15,18 @@ import { AccountService } from '../_services/account.service';
     standalone: false
 })
 export class MemberComponent implements OnInit {
+  readonly maxCommentLength = 2000;
+
   events: Event[] = [];
   comments: Comment[] = [];
   newCommentContent = '';
   isAdmin = false;
+  currentUserId: string | null = null;
+
+  eventsLoading = false;
+  commentsLoading = false;
+  commentSubmitting = false;
+  interestPendingEventId: number | null = null;
 
   constructor(
     private eventService: EventService,
@@ -29,44 +37,89 @@ export class MemberComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadEvents();
-    // GET /api/comments is Admin-only, so only admins load the list.
     this.accountService.currentUser$.pipe(take(1)).subscribe(user => {
       this.isAdmin = !!user?.roles?.includes('Admin');
+      this.currentUserId = user ? String(user.userId) : null;
+      // GET /api/comments is Admin-only, so only admins load the list.
       if (this.isAdmin) this.loadComments();
     });
   }
 
   loadEvents(): void {
-    this.eventService.getEvents().subscribe((data) => {
-      this.events = data;
+    this.eventsLoading = true;
+    this.eventService.getEvents().subscribe({
+      next: (data) => {
+        this.events = data;
+        this.eventsLoading = false;
+      },
+      error: () => {
+        this.eventsLoading = false;
+      }
     });
   }
 
   loadComments(): void {
-    this.commentService.getComments().subscribe((data) => {
-      this.comments = data;
+    this.commentsLoading = true;
+    this.commentService.getComments().subscribe({
+      next: (data) => {
+        this.comments = data;
+        this.commentsLoading = false;
+      },
+      error: () => {
+        this.commentsLoading = false;
+      }
     });
   }
 
-  declareInterest(eventId: number): void {
-    this.eventService.declareInterest(eventId).subscribe(() => {
-      this.toastr.success('Interest declared successfully!');
+  isInterested(event: Event): boolean {
+    return this.currentUserId !== null && event.interestedUsers.includes(this.currentUserId);
+  }
+
+  // The server only adds interest (there is no way to withdraw it), so the button stays in its "Interested" state.
+  declareInterest(event: Event): void {
+    if (this.isInterested(event) || this.interestPendingEventId !== null) return;
+
+    this.interestPendingEventId = event.id;
+    this.eventService.declareInterest(event.id).subscribe({
+      next: (updated) => {
+        this.events = this.events.map(e => e.id === updated.id ? updated : e);
+        this.interestPendingEventId = null;
+        this.toastr.success(`You are marked as interested in ${event.title}.`);
+      },
+      error: () => {
+        this.interestPendingEventId = null;
+      }
     });
+  }
+
+  canSubmitComment(): boolean {
+    return this.newCommentContent.trim().length > 0
+      && this.newCommentContent.length <= this.maxCommentLength
+      && !this.commentSubmitting;
   }
 
   addComment(): void {
+    if (!this.canSubmitComment()) return;
+
     const newComment: Comment = {
       id: 0,
-      content: this.newCommentContent,
+      content: this.newCommentContent.trim(),
       userId: '', // ignored by the server, which uses the authenticated user
       date: new Date(),
       seen: false // ignored by the server
     };
 
-    this.commentService.addComment(newComment).subscribe(() => {
-      if (this.isAdmin) this.loadComments();
-      this.newCommentContent = '';
-      this.toastr.success('Comment added successfully!');
+    this.commentSubmitting = true;
+    this.commentService.addComment(newComment).subscribe({
+      next: () => {
+        this.commentSubmitting = false;
+        this.newCommentContent = '';
+        this.toastr.success('Comment posted.');
+        if (this.isAdmin) this.loadComments();
+      },
+      error: () => {
+        this.commentSubmitting = false;
+      }
     });
   }
 }
