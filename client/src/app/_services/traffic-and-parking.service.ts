@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Observable, throwError } from 'rxjs';
-import { catchError, tap } from 'rxjs/operators';
+import { Observable, of, throwError } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { ParkingSpace } from '../_models/parking-space.model';
 import { TrafficData } from '../_models/traffic-data.model';
 import { Reservation } from '../_models/reservation.model';
@@ -30,19 +30,19 @@ export class TrafficAndParkingService {
 
   reserveParkingSpace(reservation: Reservation): Observable<any> {
     return this.http.post(`${this.parkingUrl}/reserve`, reservation).pipe(
-      tap(response => {
-        console.log('API response:', response);
-      }),
       catchError(this.handleError)
     );
   }
 
-  getActiveReservation(): Observable<Reservation> {
+  // The API returns 404 when the user has no active reservation. That is a normal state, not an error.
+  getActiveReservation(): Observable<Reservation | null> {
     return this.http.get<Reservation>(`${this.parkingUrl}/active-reservation`).pipe(
-      tap(response => {
-        console.log('API response:', response);
-      }),
-      catchError(this.handleError)
+      catchError((error: HttpErrorResponse) => {
+        if (error.status === 404) {
+          return of(null);
+        }
+        return this.handleError(error);
+      })
     );
   }
 
@@ -54,6 +54,6 @@ export class TrafficAndParkingService {
         `Backend returned code ${error.status}, ` +
         `body was: ${error.error}`);
     }
-    return throwError('Something bad happened; please try again later.');
+    return throwError(() => 'Something bad happened; please try again later.');
   }
 }

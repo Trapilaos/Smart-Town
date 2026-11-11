@@ -1,66 +1,77 @@
-<div class="container mt-5">
-  <div class="row justify-content-center">
-    <div class="col-md-8">
-      <div class="card shadow-lg">
-        <div class="card-header bg-success text-white text-center">
-          <h2 class="card-header-title"><i class="fas fa-credit-card"></i> Payment Processing</h2>
-        </div>
-        <div class="card-body">
-          <form (ngSubmit)="processPayment()">
-            <div class="form-group">
-              <label for="invoiceNumber">Invoice Number</label>
-              <input type="text" id="invoiceNumber" class="form-control" [(ngModel)]="payment.invoiceNumber"
-                name="invoiceNumber" required>
-              </div>
-              <button type="button" class="btn btn-primary mt-3" (click)="checkInvoice()" [disabled]="loading">
-                <i class="fas fa-search"></i> Check Invoice
-              </button>
+<div class="page">
+  <header class="page-header">
+    <h1 class="page-title">Pay an invoice</h1>
+    <p class="page-subtitle">Enter an invoice number to see what is due.</p>
+  </header>
 
-              @if (invoiceChecked) {
-                <div class="mt-3">
-                  <div class="form-group">
-                    <label for="amount">Amount</label>
-                    <input type="number" id="amount" class="form-control" [(ngModel)]="payment.amount" name="amount"
-                      readonly>
-                    </div>
-                    <div class="form-group">
-                      <label for="currency">Currency</label>
-                      <input type="text" id="currency" class="form-control" [(ngModel)]="payment.currency" name="currency"
-                        readonly>
-                      </div>
-                      <div class="form-group">
-                        <label for="description">Description</label>
-                        <input type="text" id="description" class="form-control" [(ngModel)]="payment.description"
-                          name="description" readonly>
-                        </div>
-                        <button type="submit" class="btn btn-success mt-3" [disabled]="!invoiceChecked || loading">
-                          <i class="fas fa-check"></i> Pay
-                        </button>
-                      </div>
-                    }
-                  </form>
-                  @if (loading) {
-                    <div class="text-center mt-3">
-                      <div class="spinner-border" role="status">
-                        <span class="sr-only">Loading...</span>
-                      </div>
-                    </div>
-                  }
-                  @if (paymentStatus) {
-                    <div class="alert alert-info mt-3">
-                      <i class="fas fa-check-circle"></i> {{ paymentStatus }}
-                    </div>
-                  }
-                  @if (errorMessage) {
-                    <div class="alert alert-danger alert-dismissible mt-3">
-                      <button type="button" class="close" aria-label="Close" (click)="closeAlert()">
-                        <span aria-hidden="true">&times;</span>
-                      </button>
-                      <i class="fas fa-exclamation-triangle"></i> {{ errorMessage }}
-                    </div>
-                  }
-                </div>
-              </div>
-            </div>
+  <div class="row justify-content-center">
+    <div class="col-md-10 col-lg-7">
+      <form class="card card-elevated mb-4" novalidate (ngSubmit)="checkInvoice()">
+        <div class="card-body">
+          <label for="invoice-number" class="form-label fw-semibold">Invoice number</label>
+          <div class="input-group">
+            <input id="invoice-number" name="invoiceNumber" type="text" autocomplete="off"
+              class="form-control"
+              [class.is-invalid]="!!invoiceError"
+              [attr.aria-invalid]="!!invoiceError"
+              [attr.aria-describedby]="invoiceError ? 'invoice-error invoice-help' : 'invoice-help'"
+              [(ngModel)]="invoiceNumber">
+            <button type="submit" class="btn btn-primary" [disabled]="checking">
+              <i class="fas fa-search"></i> Check invoice
+            </button>
           </div>
+          @if (invoiceError) {
+            <div id="invoice-error" class="invalid-feedback d-block">{{ invoiceError }}</div>
+          }
+          <div id="invoice-help" class="form-text">Find the invoice number on your municipal bill.</div>
         </div>
+      </form>
+
+      @if (checking) {
+        <div class="loading-state">
+          <div class="spinner-border text-primary" role="status"></div>
+          <p class="mt-2 mb-0">Checking invoice…</p>
+        </div>
+      }
+
+      @if (lookupError) {
+        <div class="alert alert-danger" role="alert">{{ lookupError }}</div>
+      }
+
+      @if (invoice && !checking) {
+        <article class="card card-elevated" aria-live="polite">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+              <div>
+                <p class="small text-muted mb-1">Invoice {{ invoice.invoiceNumber }}</p>
+                <p class="display-6 fw-semibold mb-0">
+                  {{ invoice.amount | currency:invoice.currency:'symbol':'1.2-2' }}
+                </p>
+              </div>
+              @if (invoice.isPaid) {
+                <span class="badge bg-success fs-6">Paid</span>
+              } @else {
+                <span class="badge bg-warning text-dark fs-6">Unpaid</span>
+              }
+            </div>
+
+            @if (invoice.isPaid) {
+              <p class="text-muted mb-0">
+                <i class="fas fa-check-circle text-success"></i> This invoice has already been paid.
+              </p>
+            } @else {
+              <button type="button" class="btn btn-success w-100" [disabled]="paying" (click)="payInvoice()">
+                @if (paying) {
+                  <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                  Processing…
+                } @else {
+                  <i class="fas fa-credit-card"></i> Pay now
+                }
+              </button>
+            }
+          </div>
+        </article>
+      }
+    </div>
+  </div>
+</div>

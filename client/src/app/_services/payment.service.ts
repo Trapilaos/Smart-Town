@@ -1,9 +1,16 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { environment } from 'src/environments/environment';
-import { Observable, of, throwError } from 'rxjs';
+import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { Payment } from '../_models/payment.model';
+
+export interface InvoiceStatus {
+  amount: number;
+  currency: string;
+  userId: string;
+  isPaid: boolean;
+}
 
 @Injectable({
   providedIn: 'root'
@@ -13,8 +20,8 @@ export class PaymentService {
 
   constructor(private http: HttpClient) {}
 
-  checkInvoice(invoiceNumber: string): Observable<any> {
-    return this.http.get<any>(`${this.baseUrl}check/${invoiceNumber}`).pipe(
+  checkInvoice(invoiceNumber: string): Observable<InvoiceStatus> {
+    return this.http.get<InvoiceStatus>(`${this.baseUrl}check/${encodeURIComponent(invoiceNumber)}`).pipe(
       catchError(this.handleError)
     );
   }
@@ -25,9 +32,9 @@ export class PaymentService {
     );
   }
 
+  // Rethrow the HttpErrorResponse so callers can tell a 404 (unknown invoice) apart from other failures.
   private handleError(error: HttpErrorResponse) {
     console.error('Backend returned code', error.status, 'body was:', error.error);
-    return throwError(() => error.error); // Rethrow the error as an observable
+    return throwError(() => error);
   }
- 
 }
