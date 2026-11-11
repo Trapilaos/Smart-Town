@@ -66,7 +66,7 @@ public class ParkingServiceTests : IDisposable
         // Occupancy is derived from active reservations, so a seeded CurrentVehicles value is overwritten.
         _context.ParkingSpaces.Add(new ParkingSpace { Id = 1, Name = "Test", MaxVehicles = 10, CurrentVehicles = 0 });
         await _context.SaveChangesAsync();
-        var service = new ParkingService(_context, NullLogger<ParkingService>.Instance);
+        var service = new ParkingService(_context, new MunicipalityService(_context), NullLogger<ParkingService>.Instance);
 
         var (success, _, _) = await service.ReserveParkingSpaceAsync("42", 1, DateTime.UtcNow.AddMinutes(1), 30);
         Assert.True(success);
@@ -83,7 +83,7 @@ public class ParkingServiceTests : IDisposable
         Assert.Empty(_context.Reservations);
     }
 
-    private ParkingService NewService() => new(_context, NullLogger<ParkingService>.Instance);
+    private ParkingService NewService() => new(_context, new MunicipalityService(_context), NullLogger<ParkingService>.Instance);
 
     private async Task SeedSpaceWithReservationAsync(int maxVehicles, DateTime otherUserStart, int otherUserMinutes)
     {

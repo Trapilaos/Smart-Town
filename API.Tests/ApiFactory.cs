@@ -30,11 +30,22 @@ public class ApiFactory : WebApplicationFactory<Program>
         // Tests never reach OpenStreetMap: no automatic boundary fetch, and Nominatim calls hit the stub below.
         SetEnv("Municipality__AutoFetchBoundary", "false");
         SetEnv("Municipality__NominatimMinIntervalMs", "0");
-        SetEnv("RateLimits__BoundarySearchPerMinute", "10");
     }
 
     /// <summary>Nominatim answers with no candidates, so admin boundary search and apply stay offline.</summary>
     public StubHttpHandler NominatimStub { get; } = new(_ => StubHttpHandler.Json("[]"));
+
+    /// <summary>
+    /// Rate limits for this host. The default values are high enough that the suite never trips them, except
+    /// BoundarySearchPerMinute = 10, which the boundary search test relies on. Subclasses override single values.
+    /// </summary>
+    protected virtual IReadOnlyDictionary<string, string> RateLimitSettings => new Dictionary<string, string>
+    {
+        ["RateLimits:BoundarySearchPerMinute"] = "10",
+        ["RateLimits:AuthPerMinute"] = "100000",
+        ["RateLimits:PublicInvoicePerMinute"] = "100000",
+        ["RateLimits:GlobalPerMinute"] = "100000",
+    };
 
     private void SetEnv(string name, string value)
     {
@@ -46,6 +57,11 @@ public class ApiFactory : WebApplicationFactory<Program>
     {
         builder.UseEnvironment("Testing");
         builder.ConfigureLogging(l => l.SetMinimumLevel(LogLevel.Warning));
+        foreach (var (key, value) in RateLimitSettings)
+        {
+            builder.UseSetting(key, value);
+        }
+
         builder.ConfigureServices(services =>
         {
             // The traffic generator wipes and refills data from an async void timer; keep it out of tests.
