@@ -1,5 +1,165 @@
 <div class="page">
   <header class="page-header">
     <h1 class="page-title">Manage parking</h1>
+    <p class="page-subtitle">Click the map to add a parking space. Click a space to edit it or see its reservations.</p>
   </header>
+
+  @if (loadError) {
+    <div class="alert alert-danger" role="alert">Parking spaces are unavailable right now. {{ loadError }}</div>
+  }
+
+  <div class="row g-4">
+    <div class="col-lg-8">
+      @if (!loaded) {
+        <p class="small text-muted mb-2" aria-live="polite">Loading parking spaces…</p>
+      } @else {
+        <p class="small text-muted mb-2">{{ spaces.length }} space{{ spaces.length === 1 ? '' : 's' }}. Grey markers are inactive. Spaces must be inside the municipality boundary.</p>
+      }
+      <app-map [boundary]="boundary" [markers]="markers" [selectedId]="selectedMarkerId" [editable]="true"
+        (mapClick)="onMapClick($event)" (markerClick)="onMarkerClick($event)" height="520px"></app-map>
+    </div>
+
+    <div class="col-lg-4">
+      <section class="card card-elevated" aria-live="polite">
+        <div class="card-body">
+          @if (draft; as point) {
+            <h2 class="h5 mb-1">New parking space</h2>
+            <p class="small text-muted mb-3">At {{ point.lat | number: '1.5-5' }}, {{ point.lng | number: '1.5-5' }}</p>
+          } @else if (selectedSpace; as space) {
+            <h2 class="h5 mb-1">Edit parking space</h2>
+            <p class="small text-muted mb-3">
+              <i [ngClass]="parkingTypeIcon(space.type)" aria-hidden="true"></i>
+              {{ space.latitude | number: '1.5-5' }}, {{ space.longitude | number: '1.5-5' }}.
+              To move a space, remove it and add it again on the map.
+            </p>
+          } @else {
+            <div class="empty-state">
+              <i class="fas fa-parking"></i>
+              <p class="mb-0">Click the map to add a parking space, or click a space to edit it.</p>
+            </div>
+          }
+
+          @if (panelOpen) {
+            <form #spaceForm="ngForm" novalidate (ngSubmit)="save()">
+              <div class="mb-3">
+                <label for="space-name" class="form-label">Name</label>
+                <input id="space-name" name="name" type="text" class="form-control" maxlength="120" required
+                  [(ngModel)]="form.name">
+              </div>
+
+              <div class="mb-3">
+                <label for="space-address" class="form-label">Address (optional)</label>
+                <input id="space-address" name="address" type="text" class="form-control" maxlength="200"
+                  [(ngModel)]="form.address">
+              </div>
+
+              <div class="row g-2 mb-3">
+                <div class="col-6">
+                  <label for="space-type" class="form-label">Type</label>
+                  <select id="space-type" name="type" class="form-select" required [(ngModel)]="form.type">
+                    @for (type of types; track type) {
+                      <option [value]="type">{{ type }}</option>
+                    }
+                  </select>
+                </div>
+                <div class="col-6">
+                  <label for="space-capacity" class="form-label">Spaces</label>
+                  <input id="space-capacity" name="maxVehicles" type="number" step="1" min="1" max="1000" class="form-control"
+                    required [(ngModel)]="form.maxVehicles">
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label for="space-rate" class="form-label">Hourly rate (EUR)</label>
+                <input id="space-rate" name="hourlyRate" type="number" step="0.01" min="0" max="1000" class="form-control"
+                  required [(ngModel)]="form.hourlyRate">
+              </div>
+
+              <div class="form-check mb-3">
+                <input id="space-active" name="isActive" type="checkbox" class="form-check-input" [(ngModel)]="form.isActive">
+                <label for="space-active" class="form-check-label">Active (visible to the public and open for reservations)</label>
+              </div>
+
+              @if (panelErrors.length > 0) {
+                <div class="alert alert-danger" role="alert">
+                  @for (message of panelErrors; track $index) {
+                    <div>{{ message }}</div>
+                  }
+                </div>
+              }
+
+              <div class="d-flex flex-wrap gap-2">
+                <button type="submit" class="btn btn-primary" [disabled]="saving">
+                  @if (saving) {
+                    <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                  }
+                  {{ draft ? 'Add space' : 'Save changes' }}
+                </button>
+                <button type="button" class="btn btn-outline-secondary" [disabled]="saving" (click)="cancel()">Cancel</button>
+              </div>
+            </form>
+
+            @if (selectedSpace) {
+              <hr>
+              <div class="d-flex flex-wrap gap-2">
+                <button type="button" class="btn btn-outline-primary" (click)="openDrawer()">
+                  <i class="fas fa-ticket-alt me-1" aria-hidden="true"></i>Reservations
+                </button>
+
+                @if (confirmingRemove) {
+                  <button type="button" class="btn btn-danger" [disabled]="removing" (click)="remove()">
+                    {{ removing ? 'Removing…' : 'Confirm remove' }}
+                  </button>
+                  <button type="button" class="btn btn-outline-secondary" [disabled]="removing" (click)="confirmingRemove = false">
+                    Keep space
+                  </button>
+                } @else {
+                  <button type="button" class="btn btn-outline-danger" (click)="remove()">
+                    <i class="fas fa-trash me-1" aria-hidden="true"></i>Remove
+                  </button>
+                }
+              </div>
+            }
+          }
+        </div>
+      </section>
+
+      @if (drawerOpen && selectedSpace; as space) {
+        <section class="card card-elevated mt-4 reservations-drawer" aria-labelledby="drawer-heading">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h2 id="drawer-heading" class="h6 mb-0">Reservations: {{ space.name }}</h2>
+              <button type="button" class="btn btn-sm btn-outline-secondary" (click)="closeDrawer()">
+                <i class="fas fa-times" aria-hidden="true"></i><span class="visually-hidden">Close reservations</span>
+              </button>
+            </div>
+
+            @if (reservationsLoading) {
+              <p class="small text-muted mb-0">Loading reservations…</p>
+            } @else if (reservationsError) {
+              <div class="alert alert-danger py-2 mb-0" role="alert">{{ reservationsError }}</div>
+            } @else if (reservations.length === 0) {
+              <p class="small text-muted mb-0">No reservations for this space.</p>
+            } @else {
+              <ul class="list-group list-group-flush">
+                @for (reservation of reservations; track reservation.id) {
+                  <li class="list-group-item px-0 d-flex justify-content-between align-items-start gap-2">
+                    <div>
+                      <div class="fw-semibold">{{ reservation.username }}</div>
+                      <div class="small text-muted">
+                        {{ reservation.startTime | date:'short' }} to {{ reservation.endTime | date:'shortTime' }}
+                      </div>
+                    </div>
+                    <span class="badge" [ngClass]="reservation.isActive ? 'bg-success' : 'bg-secondary'">
+                      {{ reservation.isActive ? 'Active' : 'Ended' }}
+                    </span>
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+        </section>
+      }
+    </div>
+  </div>
 </div>
