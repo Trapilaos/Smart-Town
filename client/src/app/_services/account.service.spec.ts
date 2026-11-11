@@ -43,6 +43,29 @@ describe('AccountService', () => {
     expect(JSON.parse(localStorage.getItem('user')!).username).toBe('lisa');
   });
 
+  it('restores a saved user from local storage when the service starts', async () => {
+    localStorage.setItem('user', JSON.stringify({ userId: 1, username: 'lisa', token: fakeToken('Member'), roles: [] }));
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting()]
+    });
+    const restored = TestBed.inject(AccountService);
+
+    expect((await firstValueFrom(restored.currentUser$))?.roles).toEqual(['Member']);
+  });
+
+  it('drops a corrupt saved user', async () => {
+    localStorage.setItem('user', '{not json');
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting()]
+    });
+    const restored = TestBed.inject(AccountService);
+
+    expect(await firstValueFrom(restored.currentUser$)).toBeNull();
+    expect(localStorage.getItem('user')).toBeNull();
+  });
+
   it('keeps every role when the token carries several', async () => {
     service.setCurrentUser({ userId: 1, username: 'admin', token: fakeToken(['Admin', 'Moderator']), roles: [] });
 

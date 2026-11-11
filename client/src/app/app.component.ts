@@ -1,6 +1,4 @@
-import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
-import { AccountService } from './_services/account.service';
-import { User } from './_models/user';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 
 @Component({
     selector: 'app-root',
@@ -9,30 +7,7 @@ import { User } from './_models/user';
     changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
-export class AppComponent implements OnInit {
+export class AppComponent {
   title = 'Smart-Town';
   currentYear = new Date().getFullYear();
-
-
-  constructor(private accountService : AccountService) { }
-
-  ngOnInit(): void {
-    this.setCurrentUser();
-  }
-
-  
-
-  setCurrentUser(){
-    const userString = localStorage.getItem('user');
-    if(!userString) return;
-    try {
-      const user : User = JSON.parse(userString);
-      this.accountService.setCurrentUser(user);
-    } catch {
-      localStorage.removeItem('user');
-    }
-
-  }
-
-  
 }

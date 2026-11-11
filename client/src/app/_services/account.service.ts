@@ -13,7 +13,20 @@ export class AccountService {
   private currentUserSource = new BehaviorSubject<User | null>(null);
   currentUser$ = this.currentUserSource.asObservable();
 
-  constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient) {
+    this.restoreUser();
+  }
+
+  /** Signs the user back in from local storage, before any route guard runs. */
+  private restoreUser() {
+    try {
+      const userString = localStorage.getItem('user');
+      if (!userString) return;
+      this.setCurrentUser(JSON.parse(userString) as User);
+    } catch {
+      localStorage.removeItem('user');
+    }
+  }
 
   login(model: any) {
     return this.http.post<User>(`${this.baseUrl}account/login`, model).pipe(

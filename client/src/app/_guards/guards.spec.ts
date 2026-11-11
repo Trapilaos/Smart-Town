@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
+import { ActivatedRouteSnapshot, RouterStateSnapshot, UrlTree, provideRouter } from '@angular/router';
 import { BehaviorSubject, Observable, firstValueFrom } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
 import { AccountService } from '../_services/account.service';
@@ -18,7 +18,7 @@ describe('route guards', () => {
     firstValueFrom(
       TestBed.runInInjectionContext(() =>
         guard({} as ActivatedRouteSnapshot, {} as RouterStateSnapshot)
-      ) as Observable<boolean>
+      ) as Observable<boolean | UrlTree>
     );
 
   beforeEach(() => {
@@ -26,6 +26,7 @@ describe('route guards', () => {
     toastr = jasmine.createSpyObj('ToastrService', ['error']);
     TestBed.configureTestingModule({
       providers: [
+        provideRouter([]),
         { provide: AccountService, useValue: { currentUser$: currentUser.asObservable() } },
         { provide: ToastrService, useValue: toastr }
       ]
@@ -33,8 +34,10 @@ describe('route guards', () => {
   });
 
   describe('authGuard', () => {
-    it('blocks anonymous visitors and shows an error', async () => {
-      expect(await run(authGuard)).toBeFalse();
+    it('redirects anonymous visitors to home and shows an error', async () => {
+      const result = await run(authGuard);
+      expect(result instanceof UrlTree).toBeTrue();
+      expect((result as UrlTree).toString()).toBe('/');
       expect(toastr.error).toHaveBeenCalled();
     });
 
@@ -46,14 +49,18 @@ describe('route guards', () => {
   });
 
   describe('adminGuard', () => {
-    it('blocks anonymous visitors', async () => {
-      expect(await run(adminGuard)).toBeFalse();
+    it('redirects anonymous visitors to home', async () => {
+      const result = await run(adminGuard);
+      expect(result instanceof UrlTree).toBeTrue();
+      expect((result as UrlTree).toString()).toBe('/');
       expect(toastr.error).toHaveBeenCalled();
     });
 
-    it('blocks a member without the Admin role', async () => {
+    it('redirects a member without the Admin role to home', async () => {
       currentUser.next(member);
-      expect(await run(adminGuard)).toBeFalse();
+      const result = await run(adminGuard);
+      expect(result instanceof UrlTree).toBeTrue();
+      expect((result as UrlTree).toString()).toBe('/');
       expect(toastr.error).toHaveBeenCalled();
     });
 
