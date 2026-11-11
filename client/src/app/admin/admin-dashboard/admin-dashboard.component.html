@@ -48,6 +48,9 @@
           <div class="card-body">
             <div class="small text-body-secondary">Upcoming events</div>
             <div class="kpi-value">{{ upcomingEvents.loading ? '…' : upcomingEvents.failed ? '—' : upcomingEvents.value }}</div>
+            @if (!upcomingEvents.loading && !upcomingEvents.failed && upcomingDrafts > 0) {
+              <div class="small text-body-secondary">+{{ upcomingDrafts }} drafts</div>
+            }
           </div>
         </a>
       </div>

@@ -34,6 +34,8 @@ export class AdminDashboardComponent implements OnInit {
   unpaidTotal: KpiState = loadingKpi();
   overdueInvoices: KpiState = loadingKpi();
   upcomingEvents: KpiState = loadingKpi();
+  /** Upcoming unpublished events. Shown muted under the published count. */
+  upcomingDrafts = 0;
 
   /** Unpaid total is money, so it is kept apart from the count KPIs. */
   unpaidTotalAmount: number | null = null;
@@ -98,8 +100,12 @@ export class AdminDashboardComponent implements OnInit {
 
   loadUpcomingEvents(): void {
     this.upcomingEvents = loadingKpi();
-    this.dashboard.getUpcomingEventCount().subscribe({
-      next: count => this.upcomingEvents = doneKpi(count),
+    this.upcomingDrafts = 0;
+    this.dashboard.getUpcomingEventCounts().subscribe({
+      next: counts => {
+        this.upcomingEvents = doneKpi(counts.published);
+        this.upcomingDrafts = counts.drafts;
+      },
       error: () => this.upcomingEvents = failedKpi()
     });
   }
