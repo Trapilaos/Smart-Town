@@ -6,12 +6,12 @@ namespace API.Data
 {
     public static class ParkingSpaceSeed
     {
-        public static async Task SeedParkingSpaces(DataContext context)
+        public static async Task SeedParkingSpaces(DataContext context, string contentRootPath)
         {
             if (!await context.ParkingSpaces.AnyAsync())
             {
-                var parkingData = await File.ReadAllTextAsync("Data/parking-spaces.json");
-                var parkingSpaces = JsonSerializer.Deserialize<List<ParkingSpace>>(parkingData);
+                var parkingData = await File.ReadAllTextAsync(Path.Combine(contentRootPath, "Data", "parking-spaces.json"));
+                var parkingSpaces = JsonSerializer.Deserialize<List<ParkingSpace>>(parkingData, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
                 if (parkingSpaces != null)
                 {

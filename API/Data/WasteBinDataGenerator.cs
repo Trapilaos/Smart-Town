@@ -51,13 +51,13 @@ namespace API.Data
                 {
                     Location = location,
                     Capacity = 100, // Set capacity to 100 liters
-                    LastEmptied = DateTime.Now // Set last emptied time to current time
+                    LastEmptied = DateTime.UtcNow // Set last emptied time to current time
                 };
 
                 // Generate fill levels for each day
                 for (int day = 0; day < numDays; day++)
                 {
-                    var currentDay = DateTime.Today.AddDays(day);
+                    var currentDay = DateTime.UtcNow.Date.AddDays(day);
                     var currentFillLevel = 0;
 
                     // Generate fill levels for every 3-4 hours
