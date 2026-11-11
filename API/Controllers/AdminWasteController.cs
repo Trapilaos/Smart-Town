@@ -14,10 +14,12 @@ namespace API.Controllers
     public class AdminWasteController : BaseApiController
     {
         private readonly IWasteService _wasteService;
+        private readonly IAuditService _audit;
 
-        public AdminWasteController(IWasteService wasteService)
+        public AdminWasteController(IWasteService wasteService, IAuditService audit)
         {
             _wasteService = wasteService;
+            _audit = audit;
         }
 
         [HttpPost("bins")]
@@ -25,7 +27,10 @@ namespace API.Controllers
         {
             try
             {
-                return Ok(await _wasteService.CreateBinAsync(input));
+                var created = await _wasteService.CreateBinAsync(input);
+                await _audit.RecordAsync(ActorId, ActorName, "waste.bin.create", "WasteBin", created.Id.ToString(),
+                    $"{created.Type} bin at {created.Location}");
+                return Ok(created);
             }
             catch (DomainValidationException ex)
             {
@@ -39,7 +44,11 @@ namespace API.Controllers
             try
             {
                 var updated = await _wasteService.UpdateBinAsync(id, input);
-                return updated == null ? NotFound() : Ok(updated);
+                if (updated == null) return NotFound();
+
+                await _audit.RecordAsync(ActorId, ActorName, "waste.bin.update", "WasteBin", id.ToString(),
+                    $"{updated.Type} bin at {updated.Location}, fill {updated.FillPercent}%");
+                return Ok(updated);
             }
             catch (DomainValidationException ex)
             {
@@ -51,14 +60,20 @@ namespace API.Controllers
         [HttpDelete("bins/{id:int}")]
         public async Task<IActionResult> DeleteBin(int id)
         {
-            return await _wasteService.DeactivateBinAsync(id) ? NoContent() : NotFound();
+            if (!await _wasteService.DeactivateBinAsync(id)) return NotFound();
+
+            await _audit.RecordAsync(ActorId, ActorName, "waste.bin.delete", "WasteBin", id.ToString(), "Bin deactivated");
+            return NoContent();
         }
 
         [HttpPut("bins/{id:int}/empty")]
         public async Task<ActionResult<WasteBinDTO>> MarkEmptied(int id)
         {
             var emptied = await _wasteService.MarkEmptiedAsync(id);
-            return emptied == null ? NotFound() : Ok(emptied);
+            if (emptied == null) return NotFound();
+
+            await _audit.RecordAsync(ActorId, ActorName, "waste.bin.empty", "WasteBin", id.ToString(), "Bin emptied");
+            return Ok(emptied);
         }
 
         /// <summary>Collection route: nearest-neighbour refined with 2-opt, starting and ending at the municipality centre.</summary>

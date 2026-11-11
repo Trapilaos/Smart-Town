@@ -1,6 +1,7 @@
 using API.Data;
 using API.Entities;
 using API.Extensions;
+using API.Helpers;
 using API.Middleware;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -18,7 +19,8 @@ public class Program
                 // Test/diagnostic endpoints must never be reachable outside Development.
                 if (!builder.Environment.IsDevelopment())
                     manager.FeatureProviders.Add(new DevelopmentOnlyControllerFeatureProvider());
-            });
+            })
+            .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new UtcDateTimeJsonConverter()));
         builder.Services.AddOpenApi();
         builder.Services.AddApplicationServices(builder.Configuration);
         builder.Services.AddIdentityServices(builder.Configuration);
@@ -26,6 +28,8 @@ public class Program
         var app = builder.Build();
 
         // Configure the HTTP request pipeline.
+        // Security headers go first so every response carries them, including error responses.
+        app.UseMiddleware<SecurityHeadersMiddleware>();
         app.UseMiddleware<ExceptionMiddleware>();
 
         var allowedOrigins = app.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()

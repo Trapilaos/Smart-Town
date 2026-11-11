@@ -16,11 +16,13 @@ namespace API.Controllers
     {
         private readonly IMunicipalityService _municipalities;
         private readonly BoundaryLookupService _lookup;
+        private readonly IAuditService _audit;
 
-        public AdminMunicipalityController(IMunicipalityService municipalities, BoundaryLookupService lookup)
+        public AdminMunicipalityController(IMunicipalityService municipalities, BoundaryLookupService lookup, IAuditService audit)
         {
             _municipalities = municipalities;
             _lookup = lookup;
+            _audit = audit;
         }
 
         [HttpPut]
@@ -28,7 +30,10 @@ namespace API.Controllers
         {
             try
             {
-                return Ok(await _municipalities.UpdateAsync(dto));
+                var updated = await _municipalities.UpdateAsync(dto);
+                await _audit.RecordAsync(ActorId, ActorName, "municipality.update", "Municipality", "1",
+                    $"Name {updated.Name}, zoom {updated.DefaultZoom}, {updated.StreetlightCount} streetlights");
+                return Ok(updated);
             }
             catch (GeoJsonException ex)
             {
@@ -70,6 +75,8 @@ namespace API.Controllers
                 return BadRequest("That OpenStreetMap object is not an administrative boundary polygon");
 
             await _municipalities.ApplyBoundaryAsync(candidate);
+            await _audit.RecordAsync(ActorId, ActorName, "municipality.boundary.apply", "Municipality", "1",
+                $"OpenStreetMap {MunicipalityService.OsmTypeName(candidate.OsmType)} {candidate.OsmId}: {candidate.DisplayName}");
             return Ok(await _municipalities.GetAsync());
         }
 

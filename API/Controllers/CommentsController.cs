@@ -10,10 +10,12 @@ namespace API.Controllers
     public class CommentsController : BaseApiController
     {
         private readonly ICommentService _commentService;
+        private readonly IAuditService _audit;
 
-        public CommentsController(ICommentService commentService)
+        public CommentsController(ICommentService commentService, IAuditService audit)
         {
             _commentService = commentService;
+            _audit = audit;
         }
 
         [HttpPost]
@@ -50,6 +52,7 @@ namespace API.Controllers
             if (updatedComment == null)
                 return NotFound();
 
+            await _audit.RecordAsync(ActorId, ActorName, "comment.mark_seen", "Comment", id.ToString(), "Comment moderated");
             return Ok(updatedComment);
         }
     }

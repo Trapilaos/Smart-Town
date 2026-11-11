@@ -19,11 +19,12 @@ namespace API.Extensions
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<ITrafficService, TrafficService>();
             services.AddScoped<IParkingService, ParkingService>();
-            services.AddScoped<IPaymentService, PaymentService>();
+            services.AddScoped<IInvoiceService, InvoiceService>();
             services.AddScoped<IWasteService, WasteService>();
             services.AddScoped<IMunicipalityService, MunicipalityService>();
             services.AddScoped<IEventService, EventService>();
             services.AddScoped<ICommentService, CommentService>();
+            services.AddScoped<IAuditService, AuditService>();
             services.AddHttpClient<BoundaryLookupService>();
             services.AddRateLimitPolicies(config);
             services.AddHostedService<BoundaryAutoFetchService>();

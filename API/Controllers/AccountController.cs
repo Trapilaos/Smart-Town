@@ -1,9 +1,11 @@
 using API.DTOs;
 using API.Entities;
+using API.Extensions;
 using API.Interfaces;
 using AutoMapper;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 
 namespace API.Controllers
@@ -32,6 +34,7 @@ namespace API.Controllers
         /// Registers a new user and assigns the "Member" role.
         /// </summary>
         [HttpPost("register")]
+        [EnableRateLimiting(RateLimitPolicies.Auth)]
         public async Task<ActionResult<UserDTO>> Register(RegisterDTO registerDTO)
         {
             if (await UserExists(registerDTO.Username))
@@ -60,6 +63,7 @@ namespace API.Controllers
         /// never reveals whether the username exists.
         /// </summary>
         [HttpPost("login")]
+        [EnableRateLimiting(RateLimitPolicies.Auth)]
         public async Task<ActionResult<UserDTO>> Login(LoginDTO loginDTO)
         {
             if (string.IsNullOrWhiteSpace(loginDTO?.Username) || string.IsNullOrEmpty(loginDTO.Password))

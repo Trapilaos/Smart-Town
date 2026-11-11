@@ -2,6 +2,7 @@ using API.Data;
 using API.DTOs;
 using API.Entities;
 using API.Extensions;
+using API.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -13,13 +14,12 @@ namespace API.Controllers
     {
         // UserManager for managing users
         private readonly UserManager<AppUser> _userManager;
-        // DataContext for accessing the database
-        private readonly DataContext _context;
+        private readonly IAuditService _audit;
 
-        public AdminController(UserManager<AppUser> userManager, DataContext context)
+        public AdminController(UserManager<AppUser> userManager, IAuditService audit)
         {
             _userManager = userManager;
-            _context = context;
+            _audit = audit;
         }
 
         /// <summary>
@@ -80,8 +80,12 @@ namespace API.Controllers
             if (!result.Succeeded)
                 return BadRequest("Failed to remove from roles");
 
+            var updatedRoles = await _userManager.GetRolesAsync(user);
+            await _audit.RecordAsync(ActorId, ActorName, "user.roles.update", "User", user.Id.ToString(),
+                $"Roles for {user.UserName}: {string.Join(", ", updatedRoles)}");
+
             // Return the updated roles for the user
-            return Ok(await _userManager.GetRolesAsync(user));
+            return Ok(updatedRoles);
         }
 
         /// <summary>
@@ -95,29 +99,5 @@ namespace API.Controllers
             return Ok("Admins or moderators can see this");
         }
 
-        /// <summary>
-        /// Creates a new event.
-        /// </summary>
-        /// <param name="newEvent">The event data.</param>
-        /// <returns>The created event.</returns>
-        [Authorize(Policy = "RequireAdminRole")]
-        [HttpPost("create-event")]
-        public async Task<ActionResult<Event>> CreateEvent(CreateEventDTO dto)
-        {
-            var newEvent = new Event
-            {
-                Title = dto.Title,
-                Description = dto.Description,
-                PhotoUrl = dto.PhotoUrl,
-                Date = dto.Date.ToUtc()
-            };
-
-            // Add the event to the database and save changes
-            _context.Events.Add(newEvent);
-            await _context.SaveChangesAsync();
-
-            // Return the created event
-            return Ok(newEvent);
-        }
     }
 }
