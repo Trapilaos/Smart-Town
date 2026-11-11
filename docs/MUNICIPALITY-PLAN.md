@@ -328,3 +328,23 @@ The QA run passed every public, member and admin flow and every security check (
 | D7 | An admin can't issue an invoice to a registered account | `GET /api/admin/users-with-roles` returns no user id | Add `id` to the users-with-roles response (additive). The invoice form gets an optional "Citizen account" select (username) that sets `userId`, and pre-fills `payerName` from the username if it's empty. Keep "no account" as the default. |
 
 Rules: as in 2.4 and 1.7. A single Haiku builder works in the main checkout. The API is running and locks `API/bin`, so build and test with `-p:OutDir=<temp>/`. Don't start or stop servers.
+
+## 6. Fix round 2: D1 map fit (Opus diagnosis)
+
+The retest passed D2–D7. D1 still fails on maps that have a boundary plus many markers (/waste, /admin/bins, /admin/parking, /admin/route): about half the markers sit outside the container after load, and any later resize corrects it.
+
+Root cause in `client/src/app/_shared/map/map.component.ts`:
+1. `handleContainerResize` re-fits only on the **first** non-zero size. Later size changes, while the layout keeps settling, call only `invalidateSize()`, which keeps the old centre and zoom computed for a smaller box.
+2. `fitBounds` and `setView` animate by default, so Leaflet fires `zoomstart` **asynchronously**, after `moveProgrammatically()` has already reset `programmatic = false`. The component's own fit is therefore recorded as a user move (`userAdjusted = true`), and every later automatic fit is skipped.
+
+Fix:
+- Pass `{ animate: false }` to every programmatic `fitBounds` / `setView`.
+- Detect real user interaction from **DOM input only**: `pointerdown`, `wheel` and `touchstart` on the container, and `keydown` while the container has focus, plus Leaflet `dragstart`. Remove the `zoomstart` listener.
+- On **every** container resize, coalesced with `requestAnimationFrame`: call `invalidateSize()`, then, if `!userAdjusted`, call `fitView()`.
+- Keep the change-driven re-fits (boundary/markers inputs) as they are.
+- Specs:
+  1. a programmatic fit followed by a `zoomstart` does not set `userAdjusted`
+  2. a second resize after the first still re-fits
+  3. a `pointerdown` on the container stops further automatic fits
+
+Rules as in 2.4. A single Haiku builder works in the main checkout. Client only.
