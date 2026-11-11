@@ -1,35 +1,105 @@
-<div class="container mt-5">
-  <h2 class="text-center mb-4">Manage User Roles</h2>
+<div class="page container">
+  <div class="page-header">
+    <h1 class="page-title">Manage users</h1>
+    <p class="page-subtitle">Choose whether each user is a member or an admin.</p>
+  </div>
 
-  <table class="table table-striped table-hover">
-    <thead>
-      <tr>
-        <th>Username</th>
-        <th>Roles</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      @for (user of users; track user) {
-        <tr>
-          <td>{{ user.username }}</td>
-          <td>
-            @for (role of user.roles; track role) {
-              <span>
-                <i class="fas fa-check-circle text-success mr-2"></i>{{ role }}
-              </span>
+  @if (loading) {
+    <div class="loading-state">
+      <div class="spinner-border text-primary" role="status"></div>
+      <p class="mt-2 mb-0">Loading…</p>
+    </div>
+  } @else if (loadError) {
+    <div class="alert alert-warning" role="alert">{{ loadError }}</div>
+  } @else if (users.length === 0) {
+    <div class="empty-state">
+      <i class="fas fa-users"></i>
+      <p>No users found.</p>
+    </div>
+  } @else {
+    <!-- Wide screens: table -->
+    <div class="card-elevated card d-none d-md-block">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead>
+            <tr>
+              <th scope="col">Username</th>
+              <th scope="col">Roles</th>
+              <th scope="col">Role</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (user of users; track user.username) {
+              <tr>
+                <td>
+                  {{ user.username }}
+                  @if (isOwnRow(user)) {
+                    <span class="badge text-bg-light border ms-1">You</span>
+                  }
+                </td>
+                <td>
+                  <ng-container *ngTemplateOutlet="rolesBadges; context: { $implicit: user }"></ng-container>
+                </td>
+                <td>
+                  @if (!isOwnRow(user)) {
+                    <ng-container *ngTemplateOutlet="roleControls; context: { $implicit: user }"></ng-container>
+                  }
+                </td>
+              </tr>
             }
-          </td>
-          <td>
-            <button class="btn btn-sm btn-primary mr-2" (click)="updateUserRoles(user.username, ['Member'])">
-              <i class="fas fa-user-check mr-2"></i>Set Member
-            </button>
-            <button class="btn btn-sm btn-primary" (click)="updateUserRoles(user.username, ['Admin'])">
-              <i class="fas fa-user-shield mr-2"></i>Set Admin
-            </button>
-          </td>
-        </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Narrow screens: stacked cards -->
+    <div class="d-md-none d-flex flex-column gap-3">
+      @for (user of users; track user.username) {
+        <div class="card-elevated card">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+              <span class="fw-semibold text-break">
+                {{ user.username }}
+              </span>
+              @if (isOwnRow(user)) {
+                <span class="badge text-bg-light border">You</span>
+              }
+            </div>
+            <div class="mb-3">
+              <ng-container *ngTemplateOutlet="rolesBadges; context: { $implicit: user }"></ng-container>
+            </div>
+            @if (!isOwnRow(user)) {
+              <ng-container *ngTemplateOutlet="roleControls; context: { $implicit: user }"></ng-container>
+            }
+          </div>
+        </div>
       }
-    </tbody>
-  </table>
+    </div>
+  }
 </div>
+
+<ng-template #rolesBadges let-user>
+  @for (role of user.roles; track role) {
+    <span class="badge me-1" [class.text-bg-primary]="role === 'Admin'" [class.text-bg-secondary]="role !== 'Admin'">{{ role }}</span>
+  } @empty {
+    <span class="text-body-secondary small">No roles</span>
+  }
+</ng-template>
+
+<ng-template #roleControls let-user>
+  <div class="btn-group btn-group-sm" role="group" [attr.aria-label]="'Role for ' + user.username">
+    @for (role of roleOptions; track role) {
+      <button type="button" class="btn"
+              [class.btn-primary]="currentRole(user) === role"
+              [class.btn-outline-primary]="currentRole(user) !== role"
+              [attr.aria-pressed]="currentRole(user) === role"
+              [disabled]="savingUser !== null"
+              (click)="updateUserRoles(user, role)">
+        @if (savingUser === user.username && currentRole(user) !== role) {
+          <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+        }
+        {{ role }}
+      </button>
+    }
+  </div>
+</ng-template>

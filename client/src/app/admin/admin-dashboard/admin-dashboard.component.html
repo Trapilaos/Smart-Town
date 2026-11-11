@@ -1,65 +1,122 @@
-<div class="container mt-5">
-  <h2 class="text-center mb-4">Admin Dashboard</h2>
+<div class="page container">
+  <div class="page-header">
+    <h1 class="page-title">Admin dashboard</h1>
+    <p class="page-subtitle">Manage events, moderate comments and users.</p>
+  </div>
 
-  <div class="row justify-content-center">
-    <div class="col-md-6 mb-4">
-      <div class="card text-center">
-        <div class="card-body">
-          <i class="fas fa-calendar-plus fa-3x mb-3 text-primary"></i>
-          <h5 class="card-title">Create Event</h5>
-          <p class="card-text">Create a new event for the community.</p>
-          <a routerLink="/admin/create-event" class="btn btn-primary">Go to Create Event</a>
+  <div class="row g-4 mb-5">
+    <div class="col-md-6">
+      <div class="card-elevated card h-100">
+        <div class="card-body text-center p-4">
+          <i class="fas fa-calendar-plus fa-2x mb-3 text-primary"></i>
+          <h2 class="h5 card-title">Create event</h2>
+          <p class="card-text text-body-secondary">Add a new event for the community.</p>
+          <a routerLink="/admin/create-event" class="btn btn-primary">Create event</a>
         </div>
       </div>
     </div>
-    <div class="col-md-6 mb-4">
-      <div class="card text-center">
-        <div class="card-body">
-          <i class="fas fa-users-cog fa-3x mb-3 text-secondary"></i>
-          <h5 class="card-title">Manage Users</h5>
-          <p class="card-text">Manage user roles and permissions.</p>
-          <a routerLink="/admin/user-management" class="btn btn-secondary">Go to User Management</a>
+    <div class="col-md-6">
+      <div class="card-elevated card h-100">
+        <div class="card-body text-center p-4">
+          <i class="fas fa-users-cog fa-2x mb-3 text-primary"></i>
+          <h2 class="h5 card-title">Manage users</h2>
+          <p class="card-text text-body-secondary">Change member and admin roles.</p>
+          <a routerLink="/admin/user-management" class="btn btn-primary">Manage users</a>
         </div>
       </div>
     </div>
   </div>
 
-  <div class="row mt-5">
-    <div class="col-12">
-      <h3 class="text-center mb-4">Manage Events</h3>
-      <div class="event-list">
-        @for (event of events; track event) {
-          <div class="event-card card mb-4">
+  <section class="mb-5" aria-labelledby="events-heading">
+    <h2 id="events-heading" class="h4 mb-3">Events</h2>
+
+    @if (eventsLoading) {
+      <div class="loading-state">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="mt-2 mb-0">Loading…</p>
+      </div>
+    } @else if (eventsError) {
+      <div class="alert alert-warning" role="alert">Events could not be loaded. {{ eventsError }}</div>
+    } @else if (events.length === 0) {
+      <div class="empty-state">
+        <i class="fas fa-calendar-times"></i>
+        <p>No events yet. Create one to get the community started.</p>
+      </div>
+    } @else {
+      <ul class="list-group card-elevated">
+        @for (event of events; track event.id) {
+          <li class="list-group-item d-flex flex-column flex-sm-row align-items-sm-center gap-2 py-3">
+            <div class="flex-grow-1 min-width-0">
+              <div class="fw-semibold text-truncate">{{ event.title }}</div>
+              <div class="small text-body-secondary">
+                <i class="far fa-calendar me-1"></i>{{ event.date | date: 'mediumDate' }}
+                <span class="ms-3">
+                  <i class="fas fa-heart me-1"></i>{{ event.interestedUsers.length }} interested
+                </span>
+              </div>
+            </div>
+
+            @if (confirmDeleteId === event.id) {
+              <div class="d-flex gap-2">
+                <button class="btn btn-sm btn-danger" type="button"
+                        [disabled]="deletingEventId === event.id"
+                        (click)="deleteEvent(event.id)">
+                  {{ deletingEventId === event.id ? 'Deleting…' : 'Confirm delete' }}
+                </button>
+                <button class="btn btn-sm btn-outline-secondary" type="button"
+                        [disabled]="deletingEventId === event.id"
+                        (click)="cancelDeleteEvent()">
+                  Cancel
+                </button>
+              </div>
+            } @else {
+              <button class="btn btn-sm btn-outline-danger" type="button"
+                      [attr.aria-label]="'Delete ' + event.title"
+                      (click)="askDeleteEvent(event.id)">
+                <i class="fas fa-trash me-1"></i>Delete
+              </button>
+            }
+          </li>
+        }
+      </ul>
+    }
+  </section>
+
+  <section aria-labelledby="comments-heading">
+    <h2 id="comments-heading" class="h4 mb-3">Comments to review</h2>
+
+    @if (commentsLoading) {
+      <div class="loading-state">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="mt-2 mb-0">Loading…</p>
+      </div>
+    } @else if (commentsError) {
+      <div class="alert alert-warning" role="alert">Comments could not be loaded. {{ commentsError }}</div>
+    } @else if (comments.length === 0) {
+      <div class="empty-state">
+        <i class="fas fa-check-circle"></i>
+        <p>No comments waiting for review.</p>
+      </div>
+    } @else {
+      <div class="d-flex flex-column gap-3">
+        @for (comment of comments; track comment.id) {
+          <div class="card-elevated card">
             <div class="card-body">
-              <h5 class="event-title card-title">{{ event.title }}</h5>
-              <img class="event-photo card-img-top mb-3" [src]="event.photoUrl" alt="{{ event.title }}">
-              <p class="event-description card-text">{{ event.description }}</p>
-              <button class="event-button btn btn-danger" (click)="deleteEvent(event.id)">
-                <i class="fas fa-trash"></i> Delete
+              <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2 small text-body-secondary">
+                <span><i class="fas fa-user me-1"></i>User #{{ comment.userId }}</span>
+                <span><i class="far fa-clock me-1"></i>{{ comment.date | date: 'medium' }}</span>
+              </div>
+              <p class="mb-3 comment-text">{{ comment.content }}</p>
+              <button class="btn btn-sm btn-outline-success" type="button"
+                      [disabled]="seeingCommentId === comment.id"
+                      (click)="markCommentAsSeen(comment.id)">
+                <i class="fas fa-check me-1"></i>
+                {{ seeingCommentId === comment.id ? 'Saving…' : 'Mark as seen' }}
               </button>
             </div>
           </div>
         }
       </div>
-    </div>
-  </div>
-
-  <div class="row mt-5">
-    <div class="col-12">
-      <h3 class="text-center mb-4">Manage Comments</h3>
-      <div class="comment-list">
-        @for (comment of comments; track comment) {
-          <div class="comment-card card mb-4">
-            <div class="card-body">
-              <p class="comment-content card-text">{{ comment.content }}</p>
-              <small class="comment-date">{{ comment.date | date }}</small>
-              <button class="comment-button btn btn-warning" (click)="markCommentAsSeen(comment.id)">
-                <i class="fas fa-check"></i> Mark as Done
-              </button>
-            </div>
-          </div>
-        }
-      </div>
-    </div>
-  </div>
+    }
+  </section>
 </div>
