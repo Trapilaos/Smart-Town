@@ -64,7 +64,10 @@ public class Program
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "An error occurred during migration or seeding");
+            // Fail fast: the process exits non-zero, so Docker restarts it and the failure stays visible,
+            // instead of serving requests against a database that is not ready.
+            logger.LogCritical(ex, "Database migration or seeding failed; the API will not start");
+            throw;
         }
 
         app.Run();
