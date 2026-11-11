@@ -103,7 +103,7 @@
           <div class="card-elevated card">
             <div class="card-body">
               <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2 small text-body-secondary">
-                <span><i class="fas fa-user me-1"></i>User #{{ comment.userId }}</span>
+                <span><i class="fas fa-user me-1"></i>{{ comment.username || 'Unknown user' }}</span>
                 <span><i class="far fa-clock me-1"></i>{{ comment.date | date: 'medium' }}</span>
               </div>
               <p class="mb-3 comment-text">{{ comment.content }}</p>

@@ -33,7 +33,7 @@ namespace API.Controllers
             return Ok(createdComment);
         }
 
-        // Moderation queue (unseen comments, includes author ids): admin only.
+        // Moderation queue (unseen comments, with author ids and usernames): admin only.
         [HttpGet]
         [Authorize(Policy = "RequireAdminRole")]
         public async Task<IActionResult> GetComments()

@@ -29,5 +29,6 @@ public class CommentsTests
         var mine = comments.EnumerateArray().SingleOrDefault(c => c.GetProperty("content").GetString() == content);
         Assert.Equal(JsonValueKind.Object, mine.ValueKind);
         Assert.False(mine.GetProperty("seen").GetBoolean());
+        Assert.Equal(member.Username, mine.GetProperty("username").GetString());
     }
 }
