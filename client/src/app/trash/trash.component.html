@@ -85,17 +85,20 @@
         <p>No stops on the route yet.</p>
       </div>
     } @else {
-      <ol class="list-group list-group-numbered card-elevated">
+      <ol class="route-stepper card card-elevated card-body mb-0">
         @for (location of optimalPath; track $index; let i = $index) {
-          <li class="list-group-item d-flex justify-content-between align-items-center">
-            <span>
-              {{ location }}
-              @if (i === 0) {
-                <span class="badge bg-primary ms-2">Start</span>
-              }
-            </span>
+          <li class="route-step d-flex align-items-center gap-3">
             @if (isBackToStart(i)) {
-              <span class="badge bg-success">Back to start</span>
+              <span class="route-marker bg-success text-white" aria-hidden="true"><i class="fas fa-undo"></i></span>
+              <span class="route-label fw-semibold">Back to start</span>
+            } @else {
+              <span class="route-marker bg-primary text-white" aria-hidden="true">{{ i + 1 }}</span>
+              <span class="route-label">
+                {{ location }}
+                @if (i === 0) {
+                  <span class="badge bg-primary ms-2">Start</span>
+                }
+              </span>
             }
           </li>
         }
