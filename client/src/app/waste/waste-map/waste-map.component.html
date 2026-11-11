@@ -1,0 +1,68 @@
+<div class="page">
+  <header class="page-header">
+    <h1 class="page-title">Waste bin map</h1>
+    <p class="page-subtitle">Where the town's bins are, and how full they are.</p>
+  </header>
+
+  <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-3">
+    <div>
+      <label for="bin-type" class="form-label fw-semibold mb-1">Bin type</label>
+      <select id="bin-type" class="form-select" name="binType" [(ngModel)]="selectedType" (ngModelChange)="loadBins()">
+        <option value="">All types</option>
+        @for (type of types; track type) {
+          <option [value]="type">{{ type }}</option>
+        }
+      </select>
+    </div>
+
+    <ul class="list-unstyled d-flex flex-wrap gap-3 small mb-0" aria-label="Legend">
+      <li><span class="legend-dot bg-success"></span> Under 50% full</li>
+      <li><span class="legend-dot" style="background-color: #fd7e14"></span> 50–79% full</li>
+      <li><span class="legend-dot bg-danger"></span> 80% or more</li>
+    </ul>
+  </div>
+
+  @if (loading) {
+    <p class="small text-muted mb-2" aria-live="polite">Loading bins…</p>
+  } @else if (error) {
+    <div class="alert alert-warning text-on-warning" role="alert">{{ error }}</div>
+  }
+
+  <app-map [boundary]="boundary" [markers]="markers" [selectedId]="selectedBinId"
+    (markerClick)="selectBin($event)" height="460px"></app-map>
+
+  @if (selectedBin; as bin) {
+    <article class="card card-elevated mt-3" aria-live="polite">
+      <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div>
+          <h2 class="h5 mb-1">{{ bin.location }}</h2>
+          <div class="small text-muted">{{ bin.type }} bin · {{ bin.currentFillLevel }} / {{ bin.capacity }} L</div>
+        </div>
+        <span class="badge fs-6" [ngClass]="fillBadgeClass(bin.fillPercent)">{{ bin.fillPercent }}% full</span>
+      </div>
+    </article>
+  }
+
+  @if (!loading && !error) {
+    @if (bins.length === 0) {
+      <div class="empty-state">
+        <i class="fas fa-trash"></i>
+        <p>No bins of this type are registered yet.</p>
+      </div>
+    } @else {
+      <h2 class="h5 mt-4 mb-2">Bins</h2>
+      <ul class="list-group card-elevated">
+        @for (bin of bins; track bin.id) {
+          <li class="list-group-item d-flex justify-content-between align-items-center gap-2">
+            <span>
+              <i [class]="wasteTypeIcon(bin.type)" [style.color]="fillColor(bin.fillPercent)" aria-hidden="true"></i>
+              {{ bin.location }}
+              <span class="small text-muted">· {{ bin.type }}</span>
+            </span>
+            <span class="badge" [ngClass]="fillBadgeClass(bin.fillPercent)">{{ bin.fillPercent }}%</span>
+          </li>
+        }
+      </ul>
+    }
+  }
+</div>

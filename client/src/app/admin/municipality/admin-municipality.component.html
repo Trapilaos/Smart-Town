@@ -1,0 +1,185 @@
+<div class="page">
+  <header class="page-header">
+    <h1 class="page-title">Municipality</h1>
+    <p class="page-subtitle">Name, centre, streetlights, and the boundary that bins and parking must sit inside.</p>
+  </header>
+
+  @if (loading) {
+    <div class="loading-state">
+      <div class="spinner-border text-primary" role="status"></div>
+      <p class="mt-2 mb-0">Loading municipality…</p>
+    </div>
+  } @else if (loadError) {
+    <div class="alert alert-danger" role="alert">{{ loadError }}</div>
+  } @else if (municipality) {
+    <div class="row g-4">
+      <div class="col-lg-5">
+        <form #settingsForm="ngForm" class="card card-elevated" novalidate (ngSubmit)="saveSettings()">
+          <div class="card-body">
+            <h2 class="h5 mb-3">Settings</h2>
+
+            <div class="mb-3">
+              <label for="mun-name" class="form-label">Name</label>
+              <input id="mun-name" name="name" type="text" class="form-control" maxlength="200" required
+                [(ngModel)]="settings.name">
+            </div>
+
+            <div class="row g-2 mb-3">
+              <div class="col-6">
+                <label for="mun-lat" class="form-label">Centre latitude</label>
+                <input id="mun-lat" name="centerLatitude" type="number" step="any" class="form-control"
+                  min="-90" max="90" required [(ngModel)]="settings.centerLatitude">
+              </div>
+              <div class="col-6">
+                <label for="mun-lng" class="form-label">Centre longitude</label>
+                <input id="mun-lng" name="centerLongitude" type="number" step="any" class="form-control"
+                  min="-180" max="180" required [(ngModel)]="settings.centerLongitude">
+              </div>
+            </div>
+
+            <div class="row g-2 mb-3">
+              <div class="col-4">
+                <label for="mun-zoom" class="form-label">Default zoom</label>
+                <input id="mun-zoom" name="defaultZoom" type="number" step="1" class="form-control"
+                  min="1" max="20" required [(ngModel)]="settings.defaultZoom">
+              </div>
+              <div class="col-4">
+                <label for="mun-lights" class="form-label">Streetlights</label>
+                <input id="mun-lights" name="streetlightCount" type="number" step="1" class="form-control"
+                  min="0" max="1000000" required [(ngModel)]="settings.streetlightCount">
+              </div>
+              <div class="col-4">
+                <label for="mun-watts" class="form-label">Watts each</label>
+                <input id="mun-watts" name="streetlightWatts" type="number" step="1" class="form-control"
+                  min="1" max="1000" required [(ngModel)]="settings.streetlightWatts">
+              </div>
+            </div>
+
+            @if (settingsErrors.length > 0) {
+              <div class="alert alert-danger" role="alert">
+                @for (message of settingsErrors; track $index) {
+                  <div>{{ message }}</div>
+                }
+              </div>
+            }
+
+            <button type="submit" class="btn btn-primary" [disabled]="saving || settingsForm.invalid">
+              @if (saving) {
+                <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+              }
+              Save settings
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div class="col-lg-7">
+        <section class="card card-elevated" aria-labelledby="boundary-heading">
+          <div class="card-body">
+            <h2 id="boundary-heading" class="h5 mb-2">Boundary</h2>
+
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+              @if (municipality.boundaryIsApproximate) {
+                <span class="badge bg-warning text-on-warning">Approximate</span>
+                <span class="small text-muted">Built-in outline, not an official boundary.</span>
+              } @else {
+                <span class="badge bg-success">{{ municipality.boundarySource || 'Uploaded' }}</span>
+                @if (municipality.boundaryFetchedAt) {
+                  <span class="small text-muted">Fetched {{ municipality.boundaryFetchedAt | date: 'mediumDate' }}</span>
+                }
+              }
+            </div>
+
+            <form #searchForm="ngForm" class="mb-3" novalidate (ngSubmit)="searchBoundary()">
+              <label for="osm-query" class="form-label fw-semibold">Find boundary on OpenStreetMap</label>
+              <div class="input-group">
+                <input id="osm-query" name="query" type="text" class="form-control" maxlength="200" required
+                  placeholder="e.g. Glyfada, Attica, Greece" autocomplete="off" [(ngModel)]="searchQuery">
+                <button type="submit" class="btn btn-primary" [disabled]="searching || searchForm.invalid">
+                  @if (searching) {
+                    <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                  } @else {
+                    <i class="fas fa-search" aria-hidden="true"></i>
+                  }
+                  Search
+                </button>
+              </div>
+            </form>
+
+            @if (searchErrors.length > 0) {
+              <div class="alert alert-danger" role="alert">
+                @for (message of searchErrors; track $index) {
+                  <div>{{ message }}</div>
+                }
+              </div>
+            }
+
+            @if (candidates.length > 0) {
+              <p class="small fw-semibold mb-1">Choose a result to preview it on the map</p>
+              <div class="list-group mb-3">
+                @for (candidate of candidates; track candidate.osmType + candidate.osmId) {
+                  <button type="button" class="list-group-item list-group-item-action text-start"
+                    [class.active]="preview === candidate" [attr.aria-pressed]="preview === candidate"
+                    (click)="previewCandidate(candidate)">
+                    {{ candidate.displayName }}
+                  </button>
+                }
+              </div>
+            } @else if (searched) {
+              <p class="small text-muted mb-3">No administrative boundaries matched that search.</p>
+            }
+
+            <app-map [boundary]="mapBoundary" height="360px"></app-map>
+
+            @if (preview) {
+              <div class="d-flex flex-wrap align-items-center gap-2 mt-3">
+                <span class="small flex-grow-1">Previewing <strong>{{ preview.displayName }}</strong></span>
+                <button type="button" class="btn btn-success" [disabled]="applying" (click)="applyPreview()">
+                  @if (applying) {
+                    <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                  }
+                  Use this boundary
+                </button>
+                <button type="button" class="btn btn-outline-secondary" [disabled]="applying" (click)="cancelPreview()">Cancel</button>
+              </div>
+            }
+
+            @if (applyErrors.length > 0) {
+              <div class="alert alert-danger mt-3 mb-0" role="alert">
+                @for (message of applyErrors; track $index) {
+                  <div>{{ message }}</div>
+                }
+              </div>
+            }
+
+            <p class="small text-muted mt-3 mb-0">
+              Boundary data &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors.
+            </p>
+
+            <details class="mt-3">
+              <summary class="fw-semibold">Advanced: paste GeoJSON</summary>
+              <div class="mt-2">
+                <label for="geojson" class="form-label small">GeoJSON Polygon, MultiPolygon, Feature or FeatureCollection</label>
+                <textarea id="geojson" name="geojson" class="form-control font-monospace small" rows="6"
+                  [(ngModel)]="geoJsonText"></textarea>
+
+                @if (geoJsonErrors.length > 0) {
+                  <div class="alert alert-danger mt-2 mb-2" role="alert">
+                    @for (message of geoJsonErrors; track $index) {
+                      <div>{{ message }}</div>
+                    }
+                  </div>
+                }
+
+                <button type="button" class="btn btn-outline-primary mt-2" [disabled]="savingGeoJson || !geoJsonText.trim()"
+                  (click)="saveGeoJson()">
+                  Save pasted boundary
+                </button>
+              </div>
+            </details>
+          </div>
+        </section>
+      </div>
+    </div>
+  }
+</div>
