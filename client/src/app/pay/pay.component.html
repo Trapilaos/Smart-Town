@@ -1,5 +1,134 @@
 <div class="page">
   <header class="page-header">
     <h1 class="page-title">Pay a bill</h1>
+    <p class="page-subtitle">Pay an invoice from the municipality. You do not need an account.</p>
   </header>
+
+  <div class="row g-4">
+    <div class="col-lg-6">
+      @if (!receipt) {
+        <section class="card card-elevated" aria-labelledby="lookup-heading">
+          <div class="card-body">
+            <h2 id="lookup-heading" class="h5 mb-3">Find your invoice</h2>
+
+            <form #lookupForm="ngForm" novalidate (ngSubmit)="lookup()">
+              <div class="mb-3">
+                <label for="invoice-number" class="form-label">Invoice number</label>
+                <input id="invoice-number" name="invoiceNumber" type="text" class="form-control" autocomplete="off"
+                  placeholder="INV-2026-000123" maxlength="20" required [(ngModel)]="invoiceNumber">
+              </div>
+
+              <div class="mb-3">
+                <label for="payment-code" class="form-label">Payment code</label>
+                <input id="payment-code" name="paymentCode" type="text" class="form-control text-uppercase" autocomplete="off"
+                  placeholder="8 characters" maxlength="11" required [(ngModel)]="paymentCode"
+                  aria-describedby="payment-code-hint">
+                <div id="payment-code-hint" class="form-text">
+                  <i class="fas fa-circle-info" aria-hidden="true"></i>
+                  Where to find your code: it is printed on your bill, next to the invoice number.
+                  It is 8 letters and digits, and is not your account password.
+                </div>
+              </div>
+
+              @if (lookupError) {
+                <div class="alert alert-danger" role="alert">{{ lookupError }}</div>
+              }
+
+              <button type="submit" class="btn btn-primary" [disabled]="looking">
+                @if (looking) {
+                  <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                  Checking…
+                } @else {
+                  Find invoice
+                }
+              </button>
+            </form>
+
+            @if (loggedIn) {
+              <p class="small text-muted mt-3 mb-0">
+                Signed in? See all your bills in <a routerLink="/my/invoices">My invoices</a>.
+              </p>
+            }
+          </div>
+        </section>
+      }
+    </div>
+
+    <div class="col-lg-6">
+      @if (receipt; as r) {
+        <section class="card card-elevated receipt" aria-labelledby="receipt-heading" aria-live="polite">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h2 id="receipt-heading" class="h5 mb-0"><i class="fas fa-check-circle text-success" aria-hidden="true"></i> Payment received</h2>
+              <button type="button" class="btn btn-sm btn-outline-secondary no-print" (click)="print()">
+                <i class="fas fa-print me-1" aria-hidden="true"></i>Print receipt
+              </button>
+            </div>
+            <dl class="row mb-4">
+              <dt class="col-sm-5">Receipt reference</dt>
+              <dd class="col-sm-7 font-monospace">{{ r.receiptReference }}</dd>
+              <dt class="col-sm-5">Invoice</dt>
+              <dd class="col-sm-7 font-monospace">{{ r.invoiceNumber }}</dd>
+              <dt class="col-sm-5">Description</dt>
+              <dd class="col-sm-7">{{ r.description }}</dd>
+              <dt class="col-sm-5">Amount paid</dt>
+              <dd class="col-sm-7">{{ r.amount | currency:'EUR':'symbol':'1.2-2' }}</dd>
+              <dt class="col-sm-5">Paid at</dt>
+              <dd class="col-sm-7">{{ r.paidAt | date:'medium' }}</dd>
+            </dl>
+            <button type="button" class="btn btn-outline-primary no-print" (click)="startAgain()">Pay another bill</button>
+          </div>
+        </section>
+      } @else if (invoice; as found) {
+        <section class="card card-elevated" aria-labelledby="details-heading" aria-live="polite">
+          <div class="card-body">
+            <h2 id="details-heading" class="h5 mb-3">Invoice details</h2>
+            <dl class="row mb-4">
+              <dt class="col-sm-5">Invoice</dt>
+              <dd class="col-sm-7 font-monospace">{{ checked?.invoiceNumber }}</dd>
+              <dt class="col-sm-5">Description</dt>
+              <dd class="col-sm-7">{{ found.description }}</dd>
+              <dt class="col-sm-5">Amount</dt>
+              <dd class="col-sm-7 fs-5 fw-semibold">{{ found.amount | currency:'EUR':'symbol':'1.2-2' }}</dd>
+              <dt class="col-sm-5">Due date</dt>
+              <dd class="col-sm-7">{{ found.dueDate | date:'mediumDate' }}</dd>
+              <dt class="col-sm-5">Status</dt>
+              <dd class="col-sm-7">
+                @if (found.isPaid) {
+                  <span class="badge bg-success">Paid</span>
+                  @if (found.paidAt) {
+                    <span class="small text-muted ms-2">{{ found.paidAt | date:'medium' }}</span>
+                  }
+                } @else {
+                  <span class="badge bg-warning text-on-warning">Unpaid</span>
+                }
+              </dd>
+            </dl>
+
+            @if (found.isPaid) {
+              <div class="alert alert-info mb-0" role="status">This invoice has already been paid.</div>
+            } @else {
+              @if (payError) {
+                <div class="alert alert-danger" role="alert">{{ payError }}</div>
+              }
+              <button type="button" class="btn btn-success" [disabled]="paying" (click)="pay()">
+                @if (paying) {
+                  <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                  Paying…
+                } @else {
+                  Pay {{ found.amount | currency:'EUR':'symbol':'1.2-2' }}
+                }
+              </button>
+              <p class="small text-muted mt-2 mb-0">Payments are simulated in this version, so no money is taken.</p>
+            }
+          </div>
+        </section>
+      } @else {
+        <div class="empty-state">
+          <i class="fas fa-file-invoice"></i>
+          <p>Your invoice details will appear here.</p>
+        </div>
+      }
+    </div>
+  </div>
 </div>

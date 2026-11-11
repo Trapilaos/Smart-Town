@@ -1,5 +1,68 @@
 <div class="page">
   <header class="page-header">
     <h1 class="page-title">My invoices</h1>
+    <p class="page-subtitle">Bills issued to you. Pay an open invoice here.</p>
   </header>
+
+  @if (payError) {
+    <div class="alert alert-danger" role="alert">{{ payError }}</div>
+  }
+
+  @if (loading) {
+    <div class="loading-state">
+      <div class="spinner-border text-primary" role="status"></div>
+      <p class="mt-2 mb-0">Loading…</p>
+    </div>
+  } @else if (loadError) {
+    <div class="alert alert-danger" role="alert">Your invoices are unavailable right now. {{ loadError }}</div>
+  } @else if (invoices.length === 0) {
+    <div class="empty-state">
+      <i class="fas fa-file-invoice"></i>
+      <p>You have no invoices.</p>
+    </div>
+  } @else {
+    <div class="vstack gap-3">
+      @for (invoice of invoices; track invoice.invoiceNumber) {
+        <article class="card card-elevated">
+          <div class="card-body">
+            <div class="d-flex flex-column flex-md-row justify-content-md-between gap-2 mb-2">
+              <div>
+                <h2 class="h6 mb-1">{{ invoice.description }}</h2>
+                <div class="small text-muted font-monospace">{{ invoice.invoiceNumber }}</div>
+              </div>
+              <div class="d-flex align-items-center gap-2">
+                <span class="badge" [ngClass]="statusOf(invoice).className">{{ statusOf(invoice).label }}</span>
+                <span class="fw-semibold">{{ invoice.amount | currency:'EUR':'symbol':'1.2-2' }}</span>
+              </div>
+            </div>
+
+            <p class="small mb-3">
+              Issued {{ invoice.issuedAt | date:'mediumDate' }} · Due {{ invoice.dueDate | date:'mediumDate' }}
+              @if (invoice.isPaid && invoice.paidAt) {
+                · Paid {{ invoice.paidAt | date:'mediumDate' }}
+              }
+              @if (invoice.receiptReference) {
+                · Receipt <span class="font-monospace">{{ invoice.receiptReference }}</span>
+              }
+            </p>
+
+            @if (!invoice.isPaid) {
+              <div class="d-flex flex-wrap align-items-center gap-3">
+                <button type="button" class="btn btn-success" [disabled]="payingNumber !== null"
+                  (click)="pay(invoice)">
+                  @if (payingNumber === invoice.invoiceNumber) {
+                    <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                    Paying…
+                  } @else {
+                    Pay now
+                  }
+                </button>
+                <span class="small text-muted">Payment code: <span class="font-monospace">{{ invoice.paymentCode }}</span></span>
+              </div>
+            }
+          </div>
+        </article>
+      }
+    </div>
+  }
 </div>
