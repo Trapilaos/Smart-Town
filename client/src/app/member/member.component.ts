@@ -1,5 +1,5 @@
 import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
-import { Event } from '../_models/event.model';
+import { EventDTO } from '../_models/event.model';
 import { Comment } from '../_models/comment.model';
 import { EventService } from '../_services/event.service';
 import { CommentService } from '../_services/comment.service';
@@ -17,11 +17,10 @@ import { AccountService } from '../_services/account.service';
 export class MemberComponent implements OnInit {
   readonly maxCommentLength = 2000;
 
-  events: Event[] = [];
+  events: EventDTO[] = [];
   comments: Comment[] = [];
   newCommentContent = '';
   isAdmin = false;
-  currentUserId: string | null = null;
 
   eventsLoading = false;
   commentsLoading = false;
@@ -39,7 +38,6 @@ export class MemberComponent implements OnInit {
     this.loadEvents();
     this.accountService.currentUser$.pipe(take(1)).subscribe(user => {
       this.isAdmin = !!user?.roles?.includes('Admin');
-      this.currentUserId = user ? String(user.userId) : null;
       // GET /api/comments is Admin-only, so only admins load the list.
       if (this.isAdmin) this.loadComments();
     });
@@ -71,22 +69,25 @@ export class MemberComponent implements OnInit {
     });
   }
 
-  isInterested(event: Event): boolean {
-    return this.currentUserId !== null && event.interestedUsers.includes(this.currentUserId);
-  }
-
-  // The server only adds interest (there is no way to withdraw it), so the button stays in its "Interested" state.
-  declareInterest(event: Event): void {
-    if (this.isInterested(event) || this.interestPendingEventId !== null) return;
+  /** Declares interest, or withdraws it when the user is already interested. The server returns the updated event. */
+  toggleInterest(event: EventDTO): void {
+    if (this.interestPendingEventId !== null) return;
 
     this.interestPendingEventId = event.id;
-    this.eventService.declareInterest(event.id).subscribe({
+    const request = event.isInterested
+      ? this.eventService.withdrawInterest(event.id)
+      : this.eventService.declareInterest(event.id);
+
+    request.subscribe({
       next: (updated) => {
         this.events = this.events.map(e => e.id === updated.id ? updated : e);
         this.interestPendingEventId = null;
-        this.toastr.success(`You are marked as interested in ${event.title}.`);
+        this.toastr.success(updated.isInterested
+          ? `You are marked as interested in ${updated.title}.`
+          : `You are no longer interested in ${updated.title}.`);
       },
       error: () => {
+        // The ErrorInterceptor shows the server message.
         this.interestPendingEventId = null;
       }
     });
