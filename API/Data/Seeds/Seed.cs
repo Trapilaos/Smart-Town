@@ -12,6 +12,7 @@ namespace API.Data
             await ParkingSpaceSeed.SeedParkingSpaces(context, contentRootPath);
             await TrafficDataSeed.SeedTrafficData(context);
             await InvoiceSeed.SeedInvoices(context);
+            await MunicipalitySeed.SeedMunicipalityAsync(context);
             await WasteBinSeed.SeedWasteBinsAsync(context);
         }
     }

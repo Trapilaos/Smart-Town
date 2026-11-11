@@ -20,6 +20,7 @@ namespace API.Data
         public DbSet<WasteBin> WasteBins { get; set; }
         public DbSet<Event> Events { get; set; }
         public DbSet<Comment> Comments { get; set; }
+        public DbSet<Municipality> Municipalities { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -36,6 +37,19 @@ namespace API.Data
                 .WithOne(ur => ur.Role)
                 .HasForeignKey(ur => ur.RoleId)
                 .IsRequired();
+
+            // Stored as text so the database reads as General, Recycling, ... rather than numbers.
+            builder.Entity<WasteBin>()
+                .Property(b => b.Type)
+                .HasConversion<string>()
+                .HasMaxLength(20);
+
+            builder.Entity<Municipality>(entity =>
+            {
+                entity.Property(m => m.Name).HasMaxLength(120).IsRequired();
+                entity.Property(m => m.TimeZoneId).HasMaxLength(64).IsRequired();
+                entity.Property(m => m.BoundarySource).HasMaxLength(200);
+            });
         }
     }
 }

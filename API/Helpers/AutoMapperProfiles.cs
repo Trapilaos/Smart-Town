@@ -17,9 +17,6 @@ namespace API.Helpers
             CreateMap<Photo, PhotoDTO>();
 
             CreateMap<RegisterDTO, AppUser>();
-
-            CreateMap<WasteBin, WasteBinDTO>();
-            CreateMap<WasteBinDTO, WasteBin>();
         }
     }
 }

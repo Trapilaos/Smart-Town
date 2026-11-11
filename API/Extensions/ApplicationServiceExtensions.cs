@@ -20,10 +20,13 @@ namespace API.Extensions
             services.AddScoped<ITrafficService, TrafficService>();
             services.AddScoped<IParkingService, ParkingService>();
             services.AddScoped<IPaymentService, PaymentService>();
-            services.AddScoped<IWasteManagementService, WasteManagementService>();
+            services.AddScoped<IWasteService, WasteService>();
+            services.AddScoped<IMunicipalityService, MunicipalityService>();
             services.AddScoped<IEventService, EventService>();
             services.AddScoped<ICommentService, CommentService>();
-            services.AddHttpClient<SmartLightingService>();
+            services.AddHttpClient<BoundaryLookupService>();
+            services.AddRateLimitPolicies(config);
+            services.AddHostedService<BoundaryAutoFetchService>();
             services.AddHostedService<TrafficDataBackgroundService>();
             services.AddAutoMapper(typeof(AutoMapperProfiles).Assembly);
 

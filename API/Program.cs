@@ -32,6 +32,7 @@ public class Program
             ?? new[] { "https://localhost:4200" };
         app.UseCors(policy => policy.AllowAnyHeader().AllowAnyMethod().WithOrigins(allowedOrigins));
 
+        app.UseRateLimiter();
         app.UseAuthentication();
         app.UseAuthorization();
 
