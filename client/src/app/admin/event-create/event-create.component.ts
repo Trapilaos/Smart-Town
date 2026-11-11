@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { EventService } from '../../_services/event.service';
 import { ToastrService } from 'ngx-toastr';
 import { Event } from '../../_models/event.model';
@@ -7,6 +7,7 @@ import { Event } from '../../_models/event.model';
     selector: 'app-event-create',
     templateUrl: './event-create.component.html',
     styleUrls: ['./event-create.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class EventCreateComponent {

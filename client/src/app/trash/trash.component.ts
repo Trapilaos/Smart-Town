@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { WasteManagementService } from '../_services/waste-management.service';
 import { WasteBin } from '../_models/waste-bin.model';
 import { ToastrService } from 'ngx-toastr';
@@ -9,6 +9,7 @@ import { AccountService } from '../_services/account.service';
     selector: 'app-trash',
     templateUrl: './trash.component.html',
     styleUrls: ['./trash.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class TrashComponent implements OnInit {

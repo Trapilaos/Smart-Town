@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 import { TrafficAndParkingService } from '../_services/traffic-and-parking.service';
 import { MembersService } from '../_services/members.service';
 import { ParkingSpace } from '../_models/parking-space.model';
@@ -14,6 +14,7 @@ import { User } from '../_models/user';
     selector: 'app-traffic',
     templateUrl: './traffic.component.html',
     styleUrls: ['./traffic.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class TrafficComponent implements OnInit, OnDestroy {

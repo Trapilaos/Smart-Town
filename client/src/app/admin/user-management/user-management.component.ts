@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { AdminService } from '../../_services/admin.service';
 import { ToastrService } from 'ngx-toastr';
 
@@ -6,6 +6,7 @@ import { ToastrService } from 'ngx-toastr';
     selector: 'app-user-management',
     templateUrl: './user-management.component.html',
     styleUrls: ['./user-management.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class UserManagementComponent implements OnInit {

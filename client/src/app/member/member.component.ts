@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { Event } from '../_models/event.model';
 import { Comment } from '../_models/comment.model';
 import { EventService } from '../_services/event.service';
@@ -11,6 +11,7 @@ import { AccountService } from '../_services/account.service';
     selector: 'app-member',
     templateUrl: './member.component.html',
     styleUrls: ['./member.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class MemberComponent implements OnInit {
