@@ -19,6 +19,7 @@ public class Program
                 if (!builder.Environment.IsDevelopment())
                     manager.FeatureProviders.Add(new DevelopmentOnlyControllerFeatureProvider());
             });
+        builder.Services.AddOpenApi();
         builder.Services.AddApplicationServices(builder.Configuration);
         builder.Services.AddIdentityServices(builder.Configuration);
 
@@ -35,6 +36,12 @@ public class Program
         app.UseAuthorization();
 
         app.MapControllers();
+
+        if (app.Environment.IsDevelopment())
+        {
+            // OpenAPI document at /openapi/v1.json (Development only)
+            app.MapOpenApi();
+        }
 
         using var scope = app.Services.CreateScope();
         var services = scope.ServiceProvider;

@@ -1,11 +1,13 @@
 using API.DTOs;
 using API.Entities;
-using Newtonsoft.Json.Linq;
+using System.Text.Json;
 
 namespace API.Services
 {
     public class SmartLightingService
     {
+        private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
+
         private readonly HttpClient _httpClient;
         private readonly IConfiguration _configuration;
         private readonly ILogger<SmartLightingService> _logger;
@@ -26,9 +28,10 @@ namespace API.Services
         {
             var apiKey = _configuration["WeatherApi:ApiKey"];
             var baseUrl = _configuration["WeatherApi:BaseUrl"];
-            var url = $"{baseUrl}/forecast.json?key={apiKey}&q={town}&days=1";
+            var url = $"{baseUrl}/forecast.json?key={Uri.EscapeDataString(apiKey ?? string.Empty)}&q={Uri.EscapeDataString(town ?? string.Empty)}&days=1";
 
-            _logger.LogInformation($"Fetching weather data from: {url}");
+            // Never log the URL itself: it contains the API key.
+            _logger.LogInformation("Fetching weather data for {Town}", town);
 
             var response = await _httpClient.GetAsync(url);
 
@@ -39,7 +42,7 @@ namespace API.Services
             }
 
             var responseData = await response.Content.ReadAsStringAsync();
-            var weatherResponse = JObject.Parse(responseData).ToObject<WeatherResponse>();
+            var weatherResponse = JsonSerializer.Deserialize<WeatherResponse>(responseData, JsonOptions);
 
             var condition = weatherResponse.current.condition.text.ToLower();
             var isDaytime = weatherResponse.current.is_day == 1;
