@@ -1,5 +1,7 @@
 using API.Data;
+using API.DTOs;
 using API.Entities;
+using API.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -54,8 +56,11 @@ namespace API.Controllers
         [HttpPost("edit-roles/{username}")]
         public async Task<ActionResult> EditRoles(string username, [FromQuery] string roles)
         {
+            if (string.IsNullOrWhiteSpace(roles))
+                return BadRequest("You must select at least one role");
+
             // Split the roles string into an array
-            var selectedRoles = roles.Split(",").ToArray();
+            var selectedRoles = roles.Split(",", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToArray();
 
             // Find the user by username
             var user = await _userManager.FindByNameAsync(username);
@@ -97,8 +102,16 @@ namespace API.Controllers
         /// <returns>The created event.</returns>
         [Authorize(Policy = "RequireAdminRole")]
         [HttpPost("create-event")]
-        public async Task<ActionResult<Event>> CreateEvent(Event newEvent)
+        public async Task<ActionResult<Event>> CreateEvent(CreateEventDTO dto)
         {
+            var newEvent = new Event
+            {
+                Title = dto.Title,
+                Description = dto.Description,
+                PhotoUrl = dto.PhotoUrl,
+                Date = dto.Date.ToUtc()
+            };
+
             // Add the event to the database and save changes
             _context.Events.Add(newEvent);
             await _context.SaveChangesAsync();

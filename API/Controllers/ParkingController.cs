@@ -1,15 +1,17 @@
-using System.Security.Claims;
+using API.DTOs;
 using API.Entities;
+using API.Extensions;
 using API.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers
 {
-    [ApiController]
-    [Route("api/[controller]")]
     public class ParkingController : BaseApiController
     {
-        // ParkingService for managing parking spaces and reservations
+        private static readonly TimeSpan MaxBookingHorizon = TimeSpan.FromDays(30);
+        private static readonly TimeSpan PastTolerance = TimeSpan.FromMinutes(5);
+
         private readonly IParkingService _parkingService;
 
         public ParkingController(IParkingService parkingService)
@@ -17,34 +19,29 @@ namespace API.Controllers
             _parkingService = parkingService;
         }
 
-        /// <summary>
-        /// Gets all parking spaces.
-        /// </summary>
-        /// <returns>A list of parking spaces.</returns>
         [HttpGet]
         public async Task<ActionResult<List<ParkingSpace>>> GetParkingSpaces()
         {
-            // Get all parking spaces and return them
             var parkingSpaces = await _parkingService.GetParkingSpacesAsync();
             return Ok(parkingSpaces);
         }
 
-        /// <summary>
-        /// Reserves a parking space.
-        /// </summary>
-        /// <param name="reservation">The reservation data.</param>
-        /// <returns>A success message if the reservation was successful.</returns>
+        [Authorize]
         [HttpPost("reserve")]
-        public async Task<ActionResult> ReserveParkingSpace([FromBody] Reservation reservation)
+        public async Task<ActionResult> ReserveParkingSpace([FromBody] ReservationDTO dto)
         {
-            var userId = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
-            if (userId == null)
+            var reservationTime = dto.ReservationTime.ToUtc();
+            var now = DateTime.UtcNow;
+            if (reservationTime < now - PastTolerance || reservationTime > now + MaxBookingHorizon)
             {
-                return Unauthorized(new { message = "User not authorized" });
+                ModelState.AddModelError(nameof(dto.ReservationTime),
+                    "Reservation time must not be in the past and at most 30 days ahead.");
+                return ValidationProblem(ModelState);
             }
 
-            reservation.ReservationTime = reservation.ReservationTime.ToUniversalTime();
-            var (success, startTime, endTime) = await _parkingService.ReserveParkingSpaceAsync(userId, reservation.ParkingSpaceId, reservation.ReservationTime, reservation.Duration);
+            var userId = User.GetUserId().ToString();
+            var (success, startTime, endTime) = await _parkingService.ReserveParkingSpaceAsync(
+                userId, dto.ParkingSpaceId, reservationTime, dto.Duration);
 
             if (!success)
             {
@@ -53,17 +50,12 @@ namespace API.Controllers
 
             return Ok(new { message = "Parking space reserved successfully", startTime, endTime });
         }
-        
+
+        [Authorize]
         [HttpGet("active-reservation")]
         public async Task<ActionResult<Reservation>> GetActiveReservation()
         {
-            var userId = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
-            if (userId == null)
-            {
-                return Unauthorized();
-            }
-
-            var reservation = await _parkingService.GetActiveReservationAsync(userId);
+            var reservation = await _parkingService.GetActiveReservationAsync(User.GetUserId().ToString());
             if (reservation == null)
             {
                 return NotFound();
