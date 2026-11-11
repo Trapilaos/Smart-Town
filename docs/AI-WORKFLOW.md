@@ -8,7 +8,8 @@ This file records how Smart-Town was modernised with Claude Code. Each phase wen
 | 2. Audit + improvement plan | Claude Opus | Check the map, rank risks, write the plan | Done (human approved .NET 10 + latest Angular) |
 | 3. Implementation | Claude Sonnet (parallel subagents, one worktree each) | Upgrades, tests, CI/Docker | Done |
 | 3b. UI overhaul | Opus plans → Haiku builds → Sonnet tests | Fix the UI after a hands-on browser review | Done (3 rounds) |
-| 4. Review | Claude Opus | Review the merged result end to end | Not started |
+| 3c. Municipality platform | Opus plans → Haiku builds → Sonnet tests | Maps, bins, computed lighting, public parking, events and invoices, security | Done (2 fix rounds) |
+| 4. Review | Claude Opus | Review the merged result end to end | Done: 10 findings, all fixed and retested |
 | 5. Documentation | Claude Sonnet | New README, screenshots, architecture diagram | Not started |
 
 Ground rules: make small, focused commits on the `ai-workflow` branch; a human approves the plan before Phase 3; nothing is pushed without explicit approval.
@@ -121,3 +122,31 @@ The human asked for one model per role: Opus plans, Haiku builds, Sonnet tests. 
 | 3 | Flatly's `dark` is grey, and skip-toast was only honoured for 400 and 401 | One commit plus an interceptor spec | All checks passed, no defects |
 
 Lesson worth keeping: a QA pass at 375px caught a mobile menu that had never worked, even in the original app. Desktop-only checks would have missed it.
+
+## Phase 3c: Municipality platform (Opus plans, Haiku builds, Sonnet tests)
+
+The human asked for a municipality admin platform: a map with the municipality's borders, bins placed on it, lighting from an algorithm instead of an API, public access to parking, events and invoices, and security throughout. The plan is in [`MUNICIPALITY-PLAN.md`](MUNICIPALITY-PLAN.md).
+
+- **The human's decision:** fetch the boundary **automatically** from OpenStreetMap (Nominatim) instead of uploading it. It uses a generic User-Agent, 1 request per second, a simplified polygon, and it's stored once. An approximate outline is the fallback.
+- **The parking `TODO(human)`:** written by Opus. Capacity is the peak number of cars parked at once within the requested window.
+- **Build order:**
+  1. backend B1 (municipality, geo, bins, route, lighting), then B2 (parking, events, invoices, security, audit), in sequence because they share the migrations
+  2. frontend F1 (the map foundation), running in parallel with B2
+  3. F2 (lighting, events) and F3 (parking, invoices, dashboard), in parallel worktrees
+- **Testing:** Sonnet's first pass passed every flow and every security check, and found 6 defects plus one gap. Fix round 1 resolved D2–D7: OSM place results are now resolved to their municipality through a reverse lookup, and audit amounts are culture-invariant, among others. Fix round 2 fixed map fitting (an animated `fitBounds` was being counted as a user move). The final map check had 0 of 74 markers out of view across 12 page and size combinations.
+
+## Phase 4: Review (Opus)
+
+Opus reviewed the whole branch against `main` (102 commits, 294 files) and found 10 issues. Two were release blockers that local testing couldn't reveal:
+
+| # | Finding | Fix |
+|---|---|---|
+| R1 | The admin was seeded with the public demo password in every environment | Demo data is Development-only. Production creates the admin only from `Seed__AdminPassword`, and without it logs a warning and creates nothing |
+| R2 | Behind nginx, every request came from the proxy's IP, so the whole town shared one rate-limit bucket | `UseForwardedHeaders`, trusting only the compose network (`172.28.0.0/24`) and loopback |
+| R3 | Anyone could lock out the admin | A per-(username, IP) login throttle replaces account lockout; the "admin" alias is removed |
+| R4 / R6 / R8 | Check-then-write races: parking overbooking, duplicate invoice numbers, duplicate event interest | A `BEGIN IMMEDIATE` transaction plus a semaphore; retry on a unique-key clash; idempotent on a duplicate key. Each has a 10-way concurrency test |
+| R5 | The anonymous parking list wrote to the DB on every request | Read-only, with occupancy computed at read time and expired reservations purged by a hosted service |
+| R7 | The client decoded the JWT with `atob` and never checked expiry | A base64url-safe decoder; expired sessions log out cleanly |
+| R9 / R10 | Startup continued after a failed migration; the invoice summary loaded every row into memory | Fail fast; aggregate in SQL |
+
+The fixes were planned by Opus, built by two Haiku agents in parallel (backend and client), and tested by Sonnet.
