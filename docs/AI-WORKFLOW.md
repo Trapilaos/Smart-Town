@@ -5,8 +5,9 @@ This file records how Smart-Town was modernised with Claude Code. Each phase wen
 | Phase | Model | Role | Status |
 |---|---|---|---|
 | 1. Repository map | Claude Haiku (subagent) | Fast, read-only survey of the codebase | Done |
-| 2. Audit + improvement plan | Claude Opus | Check the map, rank risks, write the plan | Done, **waiting for human approval** |
-| 3. Implementation | Claude Sonnet (parallel subagents, one worktree each) | Upgrades, tests, CI/Docker | Not started |
+| 2. Audit + improvement plan | Claude Opus | Check the map, rank risks, write the plan | Done (human approved .NET 10 + latest Angular) |
+| 3. Implementation | Claude Sonnet (parallel subagents, one worktree each) | Upgrades, tests, CI/Docker | Done |
+| 3b. UI overhaul | Opus plans → Haiku builds → Sonnet tests | Fix the UI after a hands-on browser review | Done (3 rounds) |
 | 4. Review | Claude Opus | Review the merged result end to end | Not started |
 | 5. Documentation | Claude Sonnet | New README, screenshots, architecture diagram | Not started |
 
@@ -93,3 +94,30 @@ C depends on A and B for final versions, so C writes its tests against the curre
 - Target versions: **.NET 10 LTS + latest Angular** (recommended), or a smaller step (.NET 9 / Angular 18)?
 - Should the agent install the .NET 10 SDK via winget, or will you?
 - Approve Workstreams A–C as written?
+
+---
+
+## Phase 3: Implementation (Sonnet, three parallel worktrees)
+
+The approved plan ran as three Sonnet subagents. Each worked in its own git worktree and owned a strict list of files, so the branches merged without conflicts.
+
+| Workstream | Result |
+|---|---|
+| A: Backend | Security fixes first, on .NET 8: secrets moved to user-secrets, the DB and TLS key untracked, `[Authorize]` added to the open endpoints, input DTOs, lockout with a generic login error, exception details only in Development. Then the bug fixes: parking occupancy derived from reservations, a proper `BackgroundService`, seed fixes. Then the upgrade to **.NET 10**, System.Text.Json and the built-in OpenAPI. |
+| B: Frontend | Interceptor, environment and listener-leak fixes, then **Angular 16 → 22**, one major per commit, with a passing build after each. Moved to the `application` builder and added a dev proxy. |
+| C: Tests + CI | `API.Tests` (xUnit + `WebApplicationFactory`, in-memory SQLite), Angular specs for the services, guards and interceptors, Dockerfiles + compose, and a GitHub Actions CI. The tests were written against the *planned* behaviour, so they failed before A merged and passed after. |
+
+Merge notes: the tests had to be updated for A's constructor and mapping changes. A new test exposed a design flaw: capacity counted *future* reservations as occupying the space now. That fix is left to the human as a `TODO(human)` in `ParkingService.ReserveParkingSpaceAsync`.
+
+## Phase 3b: UI overhaul (Opus plans, Haiku builds, Sonnet tests)
+
+The human asked for one model per role: Opus plans, Haiku builds, Sonnet tests. The full plan and findings are in [`UI-PLAN.md`](UI-PLAN.md).
+
+| Round | Plan (Opus) | Build (Haiku) | Test (Sonnet) |
+|---|---|---|---|
+| 0 | Traced "[object Object]" on registration to five different API error-body shapes | A shared `getErrorMessages()` parser, inline register errors, a `SKIP_ERROR_TOAST` context token | Covered in round 1 |
+| 1 | A browser survey of every page as admin and as member, at 1280px and 375px: 13 findings (F1–F13) | Three parallel worktrees: shell and error handling, citizen pages, admin pages | The flows, registration and F1–F12 passed; found 8 defects (D1–D8) |
+| 2 | Root causes for D1–D8, e.g. a dead mobile menu because Bootstrap JS was never loaded, and guards returning `false` blanking the page on a direct load | 8 commits, one per defect, plus an API DTO for comment usernames | D1–D5, D7 and D8b/c passed; contrast and a toast leak remained |
+| 3 | Flatly's `dark` is grey, and skip-toast was only honoured for 400 and 401 | One commit plus an interceptor spec | All checks passed, no defects |
+
+Lesson worth keeping: a QA pass at 375px caught a mobile menu that had never worked, even in the original app. Desktop-only checks would have missed it.
