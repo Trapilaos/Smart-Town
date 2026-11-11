@@ -1,5 +1,6 @@
 using API.DTOs;
 using API.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers
@@ -33,6 +34,7 @@ namespace API.Controllers
         /// <param name="id">The waste bin ID.</param>
         /// <param name="wasteBinDto">The updated waste bin data.</param>
         /// <returns>The updated waste bin.</returns>
+        [Authorize(Policy = "RequireAdminRole")]
         [HttpPut("{id}")]
         public async Task<ActionResult<WasteBinDTO>> UpdateWasteBin(int id, WasteBinDTO wasteBinDto)
         {

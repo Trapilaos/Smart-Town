@@ -15,18 +15,16 @@ namespace API.Services
         }
 
         /// <summary>
-        /// Processes a payment for an invoice.
+        /// Marks the caller's own unpaid invoice as paid. Returns null if there is no such unpaid invoice.
         /// </summary>
-        /// <param name="paymentDTO">The payment details.</param>
-        /// <returns>The updated invoice if the payment was successful, null otherwise.</returns>
         public async Task<Invoice> ProcessPayment(PaymentDTO paymentDTO)
         {
-            var invoice = await _context.Invoices.FirstOrDefaultAsync(i => i.InvoiceNumber == paymentDTO.InvoiceNumber && i.UserId == paymentDTO.UserId && !i.IsPaid);
+            var invoice = await _context.Invoices.FirstOrDefaultAsync(i =>
+                i.InvoiceNumber == paymentDTO.InvoiceNumber && i.UserId == paymentDTO.UserId && !i.IsPaid);
 
             if (invoice != null)
             {
                 invoice.IsPaid = true;
-                _context.Invoices.Update(invoice);
                 await _context.SaveChangesAsync();
             }
 
@@ -34,24 +32,12 @@ namespace API.Services
         }
 
         /// <summary>
-        /// Checks the status of an invoice.
+        /// Returns the caller's own invoice (paid or not), or null if it does not exist.
         /// </summary>
-        /// <param name="invoiceNumber">The invoice number.</param>
-        /// <param name="userId">The user's ID.</param>
-        /// <returns>The invoice if found and not paid, otherwise throws an exception.</returns>
-        /// <exception cref="InvalidOperationException">Thrown when the invoice is not found or already paid.</exception>
         public async Task<Invoice> CheckInvoice(string invoiceNumber, string userId)
         {
-            var invoice = await _context.Invoices.FirstOrDefaultAsync(i => i.InvoiceNumber == invoiceNumber && i.UserId == userId);
-            if (invoice == null)
-            {
-                throw new InvalidOperationException("Invoice not found");
-            }
-            if (invoice.IsPaid)
-            {
-                throw new InvalidOperationException("Invoice already paid");
-            }
-            return invoice;
+            return await _context.Invoices.AsNoTracking()
+                .FirstOrDefaultAsync(i => i.InvoiceNumber == invoiceNumber && i.UserId == userId);
         }
     }
 }

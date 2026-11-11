@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using API.Entities;
 using API.Interfaces;
+using API.Extensions;
 using API.DTOs;
 using Microsoft.AspNetCore.Identity;
 using AutoMapper;
@@ -47,6 +48,10 @@ namespace API.Controllers
         [HttpGet("id/{id}", Name = "GetUserById")]
         public async Task<ActionResult<MemberDTO>> GetUserById(int id)
         {
+            // Only the user themself or an admin may read a profile (it contains email and phone number).
+            if (!User.IsInRole("Admin") && User.GetUserId() != id)
+                return Forbid();
+
             // Get the user by ID and return a 404 Not Found response if the user is not found
             var user = await _userRepository.GetMemberByIdAsync(id);
             if (user == null)
