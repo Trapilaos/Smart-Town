@@ -103,6 +103,22 @@ public class ParkingServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Back_to_back_bookings_count_as_one_car_at_a_time()
+    {
+        // Three consecutive one-hour bookings overlap a new three-hour window, but never each other,
+        // so at most one car is parked at any moment and a 2-slot space still has room.
+        var start = DateTime.UtcNow.AddHours(1);
+        _context.ParkingSpaces.Add(new ParkingSpace { Id = 1, Name = "Test", MaxVehicles = 2 });
+        for (var i = 0; i < 3; i++)
+            _context.Reservations.Add(new Reservation { UserId = $"other{i}", ParkingSpaceId = 1, ReservationTime = start.AddHours(i), Duration = 60 });
+        await _context.SaveChangesAsync();
+
+        var (success, _, _) = await NewService().ReserveParkingSpaceAsync("42", 1, start, 180);
+
+        Assert.True(success);
+    }
+
+    [Fact]
     public async Task Future_reservation_does_not_block_a_non_overlapping_one()
     {
         // Someone has the only slot tomorrow; parking now for 30 minutes should still be allowed.

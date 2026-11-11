@@ -34,13 +34,19 @@ namespace API.Services
                 return (false, null, null);
             }
 
-            if (parkingSpace.CurrentVehicles >= parkingSpace.MaxVehicles)
+            var endTime = reservationTime.AddMinutes(duration);
+
+            // All non-expired reservations for this space (any user). Loaded into memory because
+            // SQLite cannot translate DateTime arithmetic on columns.
+            var spaceReservations = await _context.Reservations
+                .Where(r => r.ParkingSpaceId == parkingSpaceId)
+                .ToListAsync();
+
+            if (PeakOccupancy(spaceReservations, reservationTime, endTime) >= parkingSpace.MaxVehicles)
             {
-                _logger.LogInformation("Reservation rejected: parking space {Id} is full", parkingSpaceId);
+                _logger.LogInformation("Reservation rejected: parking space {Id} is full for the requested window", parkingSpaceId);
                 return (false, null, null);
             }
-
-            var endTime = reservationTime.AddMinutes(duration);
 
             // Reservations are few and short-lived, so the overlap check is done in memory
             // (SQLite cannot translate DateTime arithmetic on columns).
@@ -80,6 +86,29 @@ namespace API.Services
                 .Where(r => r.ReservationTime.AddMinutes(r.Duration) > now)
                 .OrderBy(r => r.ReservationTime)
                 .FirstOrDefault();
+        }
+
+        /// <summary>
+        /// The largest number of reservations parked at the same moment inside [start, end).
+        /// Occupancy only rises when a reservation begins, so it is enough to sample the window start
+        /// and every reservation start that falls inside the window. Intervals are half-open, so a
+        /// booking that ends exactly when the new one starts does not overlap it.
+        /// </summary>
+        private static int PeakOccupancy(IReadOnlyCollection<Reservation> reservations, DateTime start, DateTime end)
+        {
+            var overlapping = reservations
+                .Where(r => r.ReservationTime < end && r.ReservationTime.AddMinutes(r.Duration) > start)
+                .ToList();
+
+            var samplePoints = overlapping
+                .Select(r => r.ReservationTime)
+                .Where(t => t > start)
+                .Append(start);
+
+            return samplePoints
+                .Select(t => overlapping.Count(r => r.ReservationTime <= t && t < r.ReservationTime.AddMinutes(r.Duration)))
+                .DefaultIfEmpty(0)
+                .Max();
         }
 
         /// <summary>
