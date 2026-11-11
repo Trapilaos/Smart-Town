@@ -1,24 +1,83 @@
-<div class="container mt-5">
-    <h2 class="text-center mb-4">Create Event</h2>
+<div class="page container">
+  <div class="page-header">
+    <h1 class="page-title">Create event</h1>
+    <p class="page-subtitle">New events appear on the community page as soon as they are saved.</p>
+  </div>
 
-    <form (ngSubmit)="createEvent()" class="mx-auto event-form" novalidate>
-        <div class="mb-3">
-            <label for="title" class="form-label">Title</label>
-            <input type="text" class="form-control" id="title" [(ngModel)]="model.title" name="title" required>
+  <div class="card-elevated card form-card">
+    <div class="card-body p-4">
+      @if (submitErrors.length > 0) {
+        <div class="alert alert-danger" role="alert">
+          <ul class="mb-0 ps-3">
+            @for (message of submitErrors; track message) {
+              <li>{{ message }}</li>
+            }
+          </ul>
         </div>
+      }
+
+      <form (ngSubmit)="createEvent()" novalidate>
         <div class="mb-3">
-            <label for="description" class="form-label">Description</label>
-            <textarea class="form-control" id="description" [(ngModel)]="model.description" name="description"
-                required></textarea>
+          <label for="title" class="form-label">Title</label>
+          <input id="title" name="title" type="text" class="form-control"
+                 [class.is-invalid]="showError('title')"
+                 [attr.aria-invalid]="showError('title')"
+                 aria-describedby="title-help"
+                 aria-required="true"
+                 [(ngModel)]="model.title"
+                 (blur)="touch('title')">
+          <div class="d-flex justify-content-between gap-2">
+            <div id="title-help" class="invalid-feedback d-block">{{ showError('title') ? errors.title : '' }}</div>
+            <small class="form-text text-body-secondary text-nowrap">{{ model.title.length }}/{{ titleMax }}</small>
+          </div>
         </div>
+
         <div class="mb-3">
-            <label for="photoUrl" class="form-label">Photo URL</label>
-            <input type="text" class="form-control" id="photoUrl" [(ngModel)]="model.photoUrl" name="photoUrl" required>
+          <label for="description" class="form-label">Description</label>
+          <textarea id="description" name="description" rows="4" class="form-control"
+                    [class.is-invalid]="showError('description')"
+                    [attr.aria-invalid]="showError('description')"
+                    aria-describedby="description-help"
+                    [(ngModel)]="model.description"
+                    (blur)="touch('description')"></textarea>
+          <div class="d-flex justify-content-between gap-2">
+            <div id="description-help" class="invalid-feedback d-block">{{ showError('description') ? errors.description : '' }}</div>
+            <small class="form-text text-body-secondary text-nowrap">{{ model.description.length }}/{{ descriptionMax }}</small>
+          </div>
         </div>
+
         <div class="mb-3">
-            <label for="date" class="form-label">Date</label>
-            <input type="date" class="form-control" id="date" [(ngModel)]="model.date" name="date" required>
+          <label for="photoUrl" class="form-label">Photo URL <span class="text-body-secondary">(optional)</span></label>
+          <input id="photoUrl" name="photoUrl" type="url" class="form-control"
+                 [class.is-invalid]="showError('photoUrl')"
+                 [attr.aria-invalid]="showError('photoUrl')"
+                 aria-describedby="photoUrl-help"
+                 placeholder="https://"
+                 [(ngModel)]="model.photoUrl"
+                 (blur)="touch('photoUrl')">
+          <div id="photoUrl-help" class="invalid-feedback d-block">{{ showError('photoUrl') ? errors.photoUrl : '' }}</div>
         </div>
-        <button type="submit" class="btn btn-primary w-100">Create Event</button>
-    </form>
+
+        <div class="mb-4">
+          <label for="date" class="form-label">Date</label>
+          <input id="date" name="date" type="date" class="form-control"
+                 [class.is-invalid]="showError('date')"
+                 [attr.aria-invalid]="showError('date')"
+                 aria-describedby="date-help"
+                 [min]="today"
+                 [(ngModel)]="model.date"
+                 (blur)="touch('date')">
+          <div id="date-help" class="invalid-feedback d-block">{{ showError('date') ? errors.date : '' }}</div>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100" [disabled]="!isValid || submitting">
+          @if (submitting) {
+            <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Creating…
+          } @else {
+            Create event
+          }
+        </button>
+      </form>
+    </div>
+  </div>
 </div>
