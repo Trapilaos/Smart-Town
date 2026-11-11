@@ -14,6 +14,7 @@ import { MemberComponent } from './member/member.component';
 import { AdminDashboardComponent } from './admin/admin-dashboard/admin-dashboard.component';
 import { EventCreateComponent } from './admin/event-create/event-create.component';
 import { UserManagementComponent } from './admin/user-management/user-management.component';
+import { environment } from '../environments/environment';
 
 const routes: Routes = [
   { path: '', component: HomeComponent },
@@ -39,7 +40,8 @@ const routes: Routes = [
       { path: 'user-management', component: UserManagementComponent }
     ]
   },
-  { path: 'errors', component: TestErrorComponent },
+  // The debug error page is only available outside production builds.
+  ...(environment.production ? [] : [{ path: 'errors', component: TestErrorComponent }]),
   { path: 'not-found', component: NotFoundComponent },
   { path: 'server-error', component: ServerErrorComponent },
   { path: '**', component: NotFoundComponent, pathMatch: 'full' }
