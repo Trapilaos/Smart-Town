@@ -1,5 +1,8 @@
 using API.Data;
+using API.DTOs;
 using API.Entities;
+using API.Errors;
+using API.Helpers;
 using API.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -7,20 +10,29 @@ namespace API.Services
 {
     public class ParkingService : IParkingService
     {
+        public const string OutsideBoundaryMessage = "Parking space must be inside the municipality boundary";
+
         private readonly DataContext _context;
+        private readonly IMunicipalityService _municipalities;
         private readonly ILogger<ParkingService> _logger;
 
-        public ParkingService(DataContext context, ILogger<ParkingService> logger)
+        public ParkingService(DataContext context, IMunicipalityService municipalities, ILogger<ParkingService> logger)
         {
             _context = context;
+            _municipalities = municipalities;
             _logger = logger;
         }
 
-        public async Task<List<ParkingSpace>> GetParkingSpacesAsync()
+        public async Task<List<ParkingSpaceDTO>> GetParkingSpacesAsync()
         {
             await SyncReservationsAsync();
 
-            return await _context.ParkingSpaces.AsNoTracking().ToListAsync();
+            var spaces = await _context.ParkingSpaces.AsNoTracking()
+                .Where(p => p.IsActive)
+                .OrderBy(p => p.Id)
+                .ToListAsync();
+
+            return await ToDtosAsync(spaces);
         }
 
         public async Task<(bool Success, DateTime? StartTime, DateTime? EndTime)> ReserveParkingSpaceAsync(string userId, int parkingSpaceId, DateTime reservationTime, int duration)
@@ -28,9 +40,9 @@ namespace API.Services
             await SyncReservationsAsync();
 
             var parkingSpace = await _context.ParkingSpaces.FindAsync(parkingSpaceId);
-            if (parkingSpace == null)
+            if (parkingSpace == null || !parkingSpace.IsActive)
             {
-                _logger.LogInformation("Reservation rejected: parking space {Id} not found", parkingSpaceId);
+                _logger.LogInformation("Reservation rejected: parking space {Id} not found or inactive", parkingSpaceId);
                 return (false, null, null);
             }
 
@@ -86,6 +98,105 @@ namespace API.Services
                 .Where(r => r.ReservationTime.AddMinutes(r.Duration) > now)
                 .OrderBy(r => r.ReservationTime)
                 .FirstOrDefault();
+        }
+
+        public async Task<List<ParkingSpaceDTO>> GetAllForAdminAsync()
+        {
+            await SyncReservationsAsync();
+
+            var spaces = await _context.ParkingSpaces.AsNoTracking().OrderBy(p => p.Id).ToListAsync();
+            return await ToDtosAsync(spaces);
+        }
+
+        public async Task<ParkingSpaceDTO> CreateAsync(ParkingSpaceInputDTO input)
+        {
+            await EnsureInsideBoundaryAsync(input.Latitude, input.Longitude);
+
+            var space = new ParkingSpace();
+            Apply(space, input);
+            _context.ParkingSpaces.Add(space);
+            await _context.SaveChangesAsync();
+
+            return ParkingSpaceDTO.From(space, 0);
+        }
+
+        public async Task<ParkingSpaceDTO> UpdateAsync(int id, ParkingSpaceInputDTO input)
+        {
+            var space = await _context.ParkingSpaces.FindAsync(id);
+            if (space == null) return null;
+
+            await EnsureInsideBoundaryAsync(input.Latitude, input.Longitude);
+
+            Apply(space, input);
+            await _context.SaveChangesAsync();
+
+            return (await ToDtosAsync(new List<ParkingSpace> { space })).Single();
+        }
+
+        public async Task<bool> DeactivateAsync(int id)
+        {
+            var space = await _context.ParkingSpaces.FindAsync(id);
+            if (space == null) return false;
+
+            space.IsActive = false;
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<List<ParkingReservationDTO>> GetReservationsAsync(int id)
+        {
+            if (!await _context.ParkingSpaces.AnyAsync(p => p.Id == id)) return null;
+
+            var now = DateTime.UtcNow;
+            var reservations = (await _context.Reservations.AsNoTracking()
+                    .Where(r => r.ParkingSpaceId == id)
+                    .ToListAsync())
+                .Where(r => r.ReservationTime.AddMinutes(r.Duration) > now)
+                .OrderBy(r => r.ReservationTime)
+                .ToList();
+
+            var usernames = await UsernameLookup.LoadAsync(_context);
+
+            return reservations.Select(r => new ParkingReservationDTO
+            {
+                Id = r.Id,
+                Username = usernames.GetValueOrDefault(r.UserId) ?? "unknown",
+                StartTime = r.ReservationTime,
+                EndTime = r.ReservationTime.AddMinutes(r.Duration),
+                IsActive = r.ReservationTime <= now,
+            }).ToList();
+        }
+
+        private async Task EnsureInsideBoundaryAsync(double lat, double lng)
+        {
+            if (!await _municipalities.IsInsideBoundaryAsync(lat, lng))
+                throw new DomainValidationException(OutsideBoundaryMessage);
+        }
+
+        private static void Apply(ParkingSpace space, ParkingSpaceInputDTO input)
+        {
+            space.Name = input.Name.Trim();
+            space.Address = string.IsNullOrWhiteSpace(input.Address) ? null : input.Address.Trim();
+            space.Type = Enum.Parse<ParkingType>(input.Type);
+            space.Latitude = input.Latitude;
+            space.Longitude = input.Longitude;
+            space.MaxVehicles = input.MaxVehicles;
+            space.HourlyRate = input.HourlyRate;
+            space.IsActive = input.IsActive;
+        }
+
+        /// <summary>Occupancy now for each space: reservations that have started and not yet ended.</summary>
+        private async Task<List<ParkingSpaceDTO>> ToDtosAsync(IReadOnlyCollection<ParkingSpace> spaces)
+        {
+            var now = DateTime.UtcNow;
+            var activeNow = (await _context.Reservations.AsNoTracking()
+                    .Where(r => r.ReservationTime <= now)
+                    .ToListAsync())
+                .Where(r => r.ReservationTime.AddMinutes(r.Duration) > now)
+                .GroupBy(r => r.ParkingSpaceId)
+                .ToDictionary(g => g.Key, g => g.Count());
+
+            return spaces.Select(s => ParkingSpaceDTO.From(s, activeNow.GetValueOrDefault(s.Id))).ToList();
         }
 
         /// <summary>

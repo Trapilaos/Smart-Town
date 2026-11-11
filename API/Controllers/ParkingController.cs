@@ -19,8 +19,9 @@ namespace API.Controllers
             _parkingService = parkingService;
         }
 
+        /// <summary>Active parking spaces with live availability. Public.</summary>
         [HttpGet]
-        public async Task<ActionResult<List<ParkingSpace>>> GetParkingSpaces()
+        public async Task<ActionResult<List<ParkingSpaceDTO>>> GetParkingSpaces()
         {
             var parkingSpaces = await _parkingService.GetParkingSpacesAsync();
             return Ok(parkingSpaces);
