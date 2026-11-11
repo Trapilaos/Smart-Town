@@ -1,0 +1,122 @@
+<div class="page">
+  <header class="page-header">
+    <h1 class="page-title">Waste bins</h1>
+    <p class="page-subtitle">Click the map to add a bin. Click a bin to edit, empty or remove it.</p>
+  </header>
+
+  @if (loadError) {
+    <div class="alert alert-danger" role="alert">{{ loadError }}</div>
+  }
+
+  <div class="row g-4">
+    <div class="col-lg-8">
+      @if (!loaded) {
+        <p class="small text-muted mb-2" aria-live="polite">Loading bins…</p>
+      } @else {
+        <p class="small text-muted mb-2">{{ bins.length }} active bin{{ bins.length === 1 ? '' : 's' }}. Bins must be inside the municipality boundary.</p>
+      }
+      <app-map [boundary]="boundary" [markers]="markers" [selectedId]="selectedMarkerId" [editable]="true"
+        (mapClick)="onMapClick($event)" (markerClick)="onMarkerClick($event)" height="520px"></app-map>
+    </div>
+
+    <div class="col-lg-4">
+      <section class="card card-elevated" aria-live="polite">
+        <div class="card-body">
+          @if (draft; as point) {
+            <h2 class="h5 mb-1">New bin</h2>
+            <p class="small text-muted mb-3">At {{ point.lat | number: '1.5-5' }}, {{ point.lng | number: '1.5-5' }}</p>
+          } @else if (selectedBin; as bin) {
+            <h2 class="h5 mb-1">Edit bin</h2>
+            <p class="small text-muted mb-1">
+              <span class="badge" [ngClass]="fillBadgeClass(bin.fillPercent)">{{ bin.fillPercent }}% full</span>
+              <span class="ms-2">{{ bin.latitude | number: '1.5-5' }}, {{ bin.longitude | number: '1.5-5' }}</span>
+            </p>
+            <p class="small text-muted mb-3">To move a bin, remove it and add it again on the map.</p>
+          } @else {
+            <div class="empty-state">
+              <i class="fas fa-map-marker-alt"></i>
+              <p class="mb-0">Click the map to add a bin, or click a bin to edit it.</p>
+            </div>
+          }
+
+          @if (panelOpen) {
+            <form #binForm="ngForm" novalidate (ngSubmit)="save()">
+              <div class="mb-3">
+                <label for="bin-location" class="form-label">Address or location</label>
+                <input id="bin-location" name="location" type="text" class="form-control" maxlength="200" required
+                  [(ngModel)]="form.location">
+              </div>
+
+              <div class="mb-3">
+                <label for="bin-type" class="form-label">Type</label>
+                <select id="bin-type" name="type" class="form-select" required [(ngModel)]="form.type">
+                  @for (type of types; track type) {
+                    <option [value]="type">{{ type }}</option>
+                  }
+                </select>
+              </div>
+
+              <div class="row g-2 mb-3">
+                <div class="col-6">
+                  <label for="bin-capacity" class="form-label">Capacity (L)</label>
+                  <input id="bin-capacity" name="capacity" type="number" step="1" min="1" max="100000" class="form-control"
+                    required [(ngModel)]="form.capacity">
+                </div>
+                <div class="col-6">
+                  <label for="bin-fill" class="form-label">Current fill (L)</label>
+                  <input id="bin-fill" name="currentFillLevel" type="number" step="1" min="0" max="100000" class="form-control"
+                    required [(ngModel)]="form.currentFillLevel">
+                </div>
+              </div>
+
+              @if (panelErrors.length > 0) {
+                <div class="alert alert-danger" role="alert">
+                  @for (message of panelErrors; track $index) {
+                    <div>{{ message }}</div>
+                  }
+                </div>
+              }
+
+              <div class="d-flex flex-wrap gap-2">
+                <button type="submit" class="btn btn-primary" [disabled]="saving">
+                  @if (saving) {
+                    <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                  }
+                  {{ draft ? 'Add bin' : 'Save changes' }}
+                </button>
+                <button type="button" class="btn btn-outline-secondary" [disabled]="saving" (click)="cancel()">Cancel</button>
+              </div>
+            </form>
+
+            @if (selectedBin) {
+              <hr>
+              <div class="d-flex flex-wrap gap-2">
+                <button type="button" class="btn btn-outline-primary" [disabled]="emptying" (click)="empty()">
+                  @if (emptying) {
+                    <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                  } @else {
+                    <i class="fas fa-trash-restore" aria-hidden="true"></i>
+                  }
+                  Empty bin
+                </button>
+
+                @if (confirmingRemove) {
+                  <button type="button" class="btn btn-danger" [disabled]="removing" (click)="remove()">
+                    {{ removing ? 'Removing…' : 'Confirm remove' }}
+                  </button>
+                  <button type="button" class="btn btn-outline-secondary" [disabled]="removing" (click)="confirmingRemove = false">
+                    Keep bin
+                  </button>
+                } @else {
+                  <button type="button" class="btn btn-outline-danger" (click)="remove()">
+                    <i class="fas fa-trash me-1" aria-hidden="true"></i>Remove
+                  </button>
+                }
+              </div>
+            }
+          }
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
