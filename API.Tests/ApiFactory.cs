@@ -27,7 +27,14 @@ public class ApiFactory : WebApplicationFactory<Program>
 
         SetEnv("ConnectionStrings__DefaultConnection", connectionString);
         SetEnv("TokenKey", new string('k', 96) + "-test-only-signing-key");
+        // Tests never reach OpenStreetMap: no automatic boundary fetch, and Nominatim calls hit the stub below.
+        SetEnv("Municipality__AutoFetchBoundary", "false");
+        SetEnv("Municipality__NominatimMinIntervalMs", "0");
+        SetEnv("RateLimits__BoundarySearchPerMinute", "10");
     }
+
+    /// <summary>Nominatim answers with no candidates, so admin boundary search and apply stay offline.</summary>
+    public StubHttpHandler NominatimStub { get; } = new(_ => StubHttpHandler.Json("[]"));
 
     private void SetEnv(string name, string value)
     {
@@ -44,6 +51,9 @@ public class ApiFactory : WebApplicationFactory<Program>
             // The traffic generator wipes and refills data from an async void timer; keep it out of tests.
             var hosted = services.Where(d => d.ServiceType == typeof(IHostedService)).ToList();
             foreach (var d in hosted) services.Remove(d);
+
+            services.AddHttpClient<API.Services.BoundaryLookupService>()
+                .ConfigurePrimaryHttpMessageHandler(() => NominatimStub);
         });
     }
 

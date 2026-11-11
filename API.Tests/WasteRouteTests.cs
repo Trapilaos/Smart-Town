@@ -1,27 +1,29 @@
 using API.Data;
+using API.Data.Seeds;
 using API.Entities;
-using API.Extensions;
+using API.Errors;
+using API.Geo;
 using API.Services;
-using AutoMapper;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
 namespace API.Tests;
 
+/// <summary>Collection routes computed from the database: the seeded bins, filters and the depot.</summary>
 public class WasteRouteTests : IDisposable
 {
-    private static readonly string[] Locations = ["3is Septemvriou", "Alexandras", "Stadiou", "Vouliagmenis"];
-
     private readonly SqliteConnection _connection = new("Data Source=:memory:");
     private readonly DataContext _context;
-    private readonly IMapper _mapper;
+    private readonly WasteService _waste;
 
     public WasteRouteTests()
     {
         _connection.Open();
         _context = new DataContext(new DbContextOptionsBuilder<DataContext>().UseSqlite(_connection).Options);
         _context.Database.EnsureCreated();
-        _mapper = new MapperConfiguration(c => c.AddMaps(typeof(API.Helpers.AutoMapperProfiles).Assembly)).CreateMapper();
+        MunicipalitySeed.SeedMunicipalityAsync(_context).GetAwaiter().GetResult();
+        WasteBinSeed.SeedWasteBinsAsync(_context).GetAwaiter().GetResult();
+        _waste = new WasteService(_context, new MunicipalityService(_context));
     }
 
     public void Dispose()
@@ -30,48 +32,77 @@ public class WasteRouteTests : IDisposable
         _connection.Dispose();
     }
 
-    private async Task AddBinsAsync(Func<string, int> fill)
+    [Fact]
+    public async Task Route_visits_every_eligible_bin_once()
     {
-        var id = 1;
-        foreach (var location in Locations)
-            _context.WasteBins.Add(new WasteBin { Id = id++, Location = location, Capacity = 100, CurrentFillLevel = fill(location), LastEmptied = DateTime.UtcNow });
-        await _context.SaveChangesAsync();
+        var active = await _context.WasteBins.CountAsync(b => b.IsActive);
+
+        var route = await _waste.BuildRouteAsync(type: null, minFillPercent: 0);
+
+        Assert.Equal(active, route.Stops.Count);
+        Assert.Equal(route.Stops.Count, route.Stops.Select(s => s.BinId).Distinct().Count());
+        Assert.Equal(Enumerable.Range(1, route.Stops.Count), route.Stops.Select(s => s.Order));
     }
 
     [Fact]
-    public async Task Optimal_path_is_a_closed_route_over_every_non_empty_bin()
+    public async Task Route_starts_and_ends_at_the_municipality_centre()
     {
-        await AddBinsAsync(_ => 50);
-        var service = new WasteManagementService(_context, _mapper);
+        var route = await _waste.BuildRouteAsync(type: null, minFillPercent: 0);
+        var municipality = await _context.Municipalities.SingleAsync();
 
-        var (needsPath, path) = await service.GetOptimalPathAsync();
-
-        Assert.True(needsPath);
-        Assert.True(path.Count >= 3);
-        Assert.Equal(path.First(), path.Last());                 // returns to the depot
-        Assert.Equal(Locations.Length, path.Distinct().Count()); // visits every bin
-        Assert.All(path, location => Assert.Contains(location, Locations));
+        Assert.Equal(municipality.CenterLatitude, route.Depot.Lat);
+        Assert.Equal(municipality.CenterLongitude, route.Depot.Lng);
+        Assert.True(route.TotalDistanceKm > 0);
     }
 
     [Fact]
-    public async Task Route_starts_at_the_fullest_bin()
+    public async Task Route_total_distance_is_the_closed_tour_length()
     {
-        await AddBinsAsync(l => l == "Stadiou" ? 95 : 10);
-        var service = new WasteManagementService(_context, _mapper);
+        var route = await _waste.BuildRouteAsync(type: null, minFillPercent: 0);
+        var points = route.Stops.Select(s => new LatLng(s.Lat, s.Lng)).ToList();
+        var depot = new LatLng(route.Depot.Lat, route.Depot.Lng);
+        var order = Enumerable.Range(0, points.Count).ToList();
 
-        var (_, path) = await service.GetOptimalPathAsync();
+        var metres = RouteOptimizer.TourLengthMeters(depot, points, order);
 
-        Assert.Equal("Stadiou", path.First());
+        Assert.Equal(Math.Round(metres / 1000.0, 2), route.TotalDistanceKm, precision: 2);
     }
 
     [Fact]
-    public async Task No_route_is_needed_when_every_bin_is_empty()
+    public async Task Route_only_contains_bins_at_or_above_the_fill_threshold()
     {
-        await AddBinsAsync(_ => 0);
-        var service = new WasteManagementService(_context, _mapper);
+        var route = await _waste.BuildRouteAsync(type: null, minFillPercent: 60);
 
-        var (needsPath, _) = await service.GetOptimalPathAsync();
+        Assert.NotEmpty(route.Stops);
+        Assert.All(route.Stops, stop => Assert.True(stop.FillPercent >= 60, $"bin {stop.BinId} at {stop.FillPercent}%"));
+    }
 
-        Assert.False(needsPath);
+    [Fact]
+    public async Task Route_respects_the_type_filter()
+    {
+        var route = await _waste.BuildRouteAsync(WasteType.Glass, minFillPercent: 0);
+
+        Assert.NotEmpty(route.Stops);
+        Assert.All(route.Stops, stop => Assert.Equal("Glass", stop.Type));
+    }
+
+    [Fact]
+    public async Task Inactive_bins_are_not_collected()
+    {
+        var target = await _context.WasteBins.Where(b => b.IsActive).OrderBy(b => b.Id).FirstAsync();
+        await _waste.DeactivateBinAsync(target.Id);
+
+        var route = await _waste.BuildRouteAsync(type: null, minFillPercent: 0);
+
+        Assert.DoesNotContain(route.Stops, s => s.BinId == target.Id);
+    }
+
+    [Fact]
+    public async Task Route_over_no_eligible_bins_is_empty_with_zero_distance()
+    {
+        var route = await _waste.BuildRouteAsync(type: null, minFillPercent: 101);
+
+        Assert.Empty(route.Stops);
+        Assert.Equal(0, route.TotalDistanceKm);
     }
 }

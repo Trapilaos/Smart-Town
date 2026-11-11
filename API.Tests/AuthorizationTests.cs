@@ -9,7 +9,10 @@ public class AuthorizationTests
 
     public AuthorizationTests(ApiFactory factory) => _client = factory.CreateApiClient();
 
-    private static readonly object Bin = new { id = 1, location = "Stadiou", capacity = 100, currentFillLevel = 10, lastEmptied = DateTime.UtcNow };
+    private static readonly object Bin = new { location = "Stadiou", type = "General", latitude = 37.8650, longitude = 23.7530, capacity = 100, currentFillLevel = 10 };
+    private static readonly object Municipality = new { name = "Glyfada", centerLatitude = 37.8650, centerLongitude = 23.7530, defaultZoom = 14, streetlightCount = 1200, streetlightWatts = 60 };
+    private static readonly object BoundaryApply = new { osmType = "R", osmId = 1234 };
+    private static readonly object BoundarySearch = new { query = "Glyfada, Attica, Greece" };
     private static readonly object Reservation = new { parkingSpaceId = 1, reservationTime = DateTime.UtcNow.AddMinutes(5), duration = 30 };
     private static readonly object Payment = new { invoiceNumber = "INV1-01", amount = 10, currency = "EUR", description = "x" };
 
@@ -22,14 +25,23 @@ public class AuthorizationTests
 
     public static TheoryData<string, string> AdminOnly => new()
     {
-        { "PUT", "/api/waste/1" },
+        { "POST", "/api/admin/waste/bins" },
+        { "PUT", "/api/admin/waste/bins/1" },
+        { "DELETE", "/api/admin/waste/bins/1" },
+        { "PUT", "/api/admin/waste/bins/1/empty" },
+        { "GET", "/api/admin/waste/route" },
+        { "PUT", "/api/admin/municipality" },
+        { "POST", "/api/admin/municipality/boundary/apply" },
         { "POST", "/api/traffic/update" },
         { "GET", "/api/comments" },
     };
 
     private static object BodyFor(string url) => url switch
     {
-        "/api/waste/1" => Bin,
+        "/api/admin/waste/bins" => Bin,
+        "/api/admin/waste/bins/1" => Bin,
+        "/api/admin/municipality" => Municipality,
+        "/api/admin/municipality/boundary/apply" => BoundaryApply,
         "/api/parking/reserve" => Reservation,
         "/api/payment" => Payment,
         _ => null,
