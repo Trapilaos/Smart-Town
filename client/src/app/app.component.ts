@@ -11,7 +11,8 @@ import { User } from './_models/user';
 })
 export class AppComponent implements OnInit {
   title = 'Smart-Town';
-  
+  currentYear = new Date().getFullYear();
+
 
   constructor(private accountService : AccountService) { }
 

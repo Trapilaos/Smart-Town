@@ -1,6 +1,6 @@
 <nav class="navbar navbar-expand-lg navbar-dark fixed-top bg-primary" data-bs-theme="dark">
   <div class="container">
-    <a class="navbar-brand navbar-brand-custom" routerLink="/" routerLinkActive="active">Smart-Town</a>
+    <a class="navbar-brand navbar-brand-custom" routerLink="/" routerLinkActive="active" (click)="closeMenu()">Smart-Town</a>
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse"
       aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
@@ -8,47 +8,44 @@
     </button>
 
     <div class="collapse navbar-collapse" id="navbarCollapse">
-      <ul class="navbar-nav me-auto mb-2 mb-md-0">
-        @if ((accountService.currentUser$ | async); as user) {
-          @if (user.roles.includes('Admin')) {
-            <li class="nav-item"><a class="nav-link" routerLink="/admin" routerLinkActive="active">Admin Dashboard</a>
-          </li>
-          <li class="nav-item"><a class="nav-link" routerLink="/admin/create-event" routerLinkActive="active">Create
-          Event</a></li>
-          <li class="nav-item"><a class="nav-link" routerLink="/admin/user-management"
-          routerLinkActive="active">Manage Users</a></li>
-          <li class="nav-item"><a class="nav-link" routerLink="/errors" routerLinkActive="active">Errors</a></li>
-        } @else {
-          <li class="nav-item"><a class="nav-link" routerLink="/member" routerLinkActive="active">Community</a></li>
-          <li class="nav-item"><a class="nav-link" routerLink="/lighting" routerLinkActive="active">Lighting</a></li>
-          <li class="nav-item"><a class="nav-link" routerLink="/traffic" routerLinkActive="active">Traffic</a></li>
-          <li class="nav-item"><a class="nav-link" routerLink="/trash" routerLinkActive="active">Trash</a></li>
-          <li class="nav-item"><a class="nav-link" routerLink="/pay" routerLinkActive="active">Payments</a></li>
-        }
-      }
-    </ul>
+      @if (accountService.currentUser$ | async; as user) {
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          <li class="nav-item"><a class="nav-link" routerLink="/member" routerLinkActive="active" (click)="closeMenu()">Community</a></li>
+          <li class="nav-item"><a class="nav-link" routerLink="/lighting" routerLinkActive="active" (click)="closeMenu()">Lighting</a></li>
+          <li class="nav-item"><a class="nav-link" routerLink="/traffic" routerLinkActive="active" (click)="closeMenu()">Traffic</a></li>
+          <li class="nav-item"><a class="nav-link" routerLink="/trash" routerLinkActive="active" (click)="closeMenu()">Trash</a></li>
+          <li class="nav-item"><a class="nav-link" routerLink="/pay" routerLinkActive="active" (click)="closeMenu()">Payments</a></li>
 
-    @if ((accountService.currentUser$ | async); as user) {
-      <div class="dropdown" dropdown>
-        <a class="dropdown-toggle text-light text-decoration-none" dropdownToggle>
-          Welcome {{user.username | titlecase}}
-        </a>
-        <div class="dropdown-menu show" *dropdownMenu>
-          <a class="dropdown-item" (click)="logout()">Logout</a>
+          @if (isAdmin(user)) {
+            <li class="nav-item dropdown" dropdown>
+              <a class="nav-link dropdown-toggle" role="button" dropdownToggle>Admin</a>
+              <div class="dropdown-menu" *dropdownMenu>
+                <a class="dropdown-item" routerLink="/admin" routerLinkActive="active" (click)="closeMenu()">Dashboard</a>
+                <a class="dropdown-item" routerLink="/admin/create-event" routerLinkActive="active" (click)="closeMenu()">Create Event</a>
+                <a class="dropdown-item" routerLink="/admin/user-management" routerLinkActive="active" (click)="closeMenu()">Manage Users</a>
+              </div>
+            </li>
+          }
+        </ul>
+
+        <div class="dropdown ms-lg-2" dropdown>
+          <a class="nav-link text-light dropdown-toggle px-0" role="button" dropdownToggle>
+            <i class="fas fa-user-circle" aria-hidden="true"></i> {{ user.username }}
+          </a>
+          <div class="dropdown-menu dropdown-menu-end" *dropdownMenu>
+            <h6 class="dropdown-header">Signed in as {{ user.username }}</h6>
+            <a class="dropdown-item" role="button" (click)="logout()">Logout</a>
+          </div>
         </div>
-      </div>
-    }
-
-    @if (!(accountService.currentUser$ | async)) {
-      <form #loginForm="ngForm" class="d-flex ms-auto"
-        (ngSubmit)="login()" autocomplete="off">
-        <input name="username" [(ngModel)]="model.username" class="form-control me-2" type="text" placeholder="Username"
-          required>
+      } @else {
+        <form #loginForm="ngForm" class="d-flex ms-auto" (ngSubmit)="login()" autocomplete="off">
+          <input id="navUsername" name="username" [(ngModel)]="model.username" class="form-control me-2" type="text"
+            placeholder="Username" aria-label="Username" required>
           <input name="password" [(ngModel)]="model.password" class="form-control me-2" type="password"
-            placeholder="Password" required>
-            <button class="btn btn-success" type="submit">Login</button>
-          </form>
-        }
-      </div>
+            placeholder="Password" aria-label="Password" required>
+          <button class="btn btn-success" type="submit">Login</button>
+        </form>
+      }
     </div>
-  </nav>
+  </div>
+</nav>

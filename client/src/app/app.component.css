@@ -1,0 +1,14 @@
+:host {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+main {
+    /* Clears the fixed-top navbar and leaves room above page content. */
+    padding-top: 5.5rem;
+}
+
+.app-footer {
+    font-size: 0.9rem;
+}

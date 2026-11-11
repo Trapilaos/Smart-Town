@@ -1,5 +1,6 @@
 import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { Router } from '@angular/router';
+import { environment } from 'src/environments/environment';
 
 @Component({
     selector: 'app-server-error',
@@ -10,10 +11,12 @@ import { Router } from '@angular/router';
 })
 export class ServerErrorComponent {
   error : any;
-  
+  /** Stack traces are only shown in development builds. */
+  readonly showDetails = !environment.production;
+
   constructor(private router: Router){
     const navigation = this.router.getCurrentNavigation();
-    this.error = navigation?.extras?.state?.['error'];  
+    this.error = navigation?.extras?.state?.['error'];
   }
 
   ngOnInit(): void {
