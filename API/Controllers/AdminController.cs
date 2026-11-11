@@ -1,5 +1,8 @@
 using API.Data;
+using API.DTOs;
 using API.Entities;
+using API.Extensions;
+using API.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -11,13 +14,12 @@ namespace API.Controllers
     {
         // UserManager for managing users
         private readonly UserManager<AppUser> _userManager;
-        // DataContext for accessing the database
-        private readonly DataContext _context;
+        private readonly IAuditService _audit;
 
-        public AdminController(UserManager<AppUser> userManager, DataContext context)
+        public AdminController(UserManager<AppUser> userManager, IAuditService audit)
         {
             _userManager = userManager;
-            _context = context;
+            _audit = audit;
         }
 
         /// <summary>
@@ -54,8 +56,11 @@ namespace API.Controllers
         [HttpPost("edit-roles/{username}")]
         public async Task<ActionResult> EditRoles(string username, [FromQuery] string roles)
         {
+            if (string.IsNullOrWhiteSpace(roles))
+                return BadRequest("You must select at least one role");
+
             // Split the roles string into an array
-            var selectedRoles = roles.Split(",").ToArray();
+            var selectedRoles = roles.Split(",", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToArray();
 
             // Find the user by username
             var user = await _userManager.FindByNameAsync(username);
@@ -75,8 +80,12 @@ namespace API.Controllers
             if (!result.Succeeded)
                 return BadRequest("Failed to remove from roles");
 
+            var updatedRoles = await _userManager.GetRolesAsync(user);
+            await _audit.RecordAsync(ActorId, ActorName, "user.roles.update", "User", user.Id.ToString(),
+                $"Roles for {user.UserName}: {string.Join(", ", updatedRoles)}");
+
             // Return the updated roles for the user
-            return Ok(await _userManager.GetRolesAsync(user));
+            return Ok(updatedRoles);
         }
 
         /// <summary>
@@ -90,21 +99,5 @@ namespace API.Controllers
             return Ok("Admins or moderators can see this");
         }
 
-        /// <summary>
-        /// Creates a new event.
-        /// </summary>
-        /// <param name="newEvent">The event data.</param>
-        /// <returns>The created event.</returns>
-        [Authorize(Policy = "RequireAdminRole")]
-        [HttpPost("create-event")]
-        public async Task<ActionResult<Event>> CreateEvent(Event newEvent)
-        {
-            // Add the event to the database and save changes
-            _context.Events.Add(newEvent);
-            await _context.SaveChangesAsync();
-
-            // Return the created event
-            return Ok(newEvent);
-        }
     }
 }

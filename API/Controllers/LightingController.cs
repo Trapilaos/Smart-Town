@@ -1,31 +1,53 @@
+using System.ComponentModel.DataAnnotations;
+using API.DTOs;
+using API.Interfaces;
 using API.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/lighting")]
     public class LightingController : BaseApiController
     {
-        // SmartLightingService for managing lighting status
-        private readonly SmartLightingService _smartLightingService;
+        private readonly IMunicipalityService _municipalities;
 
-        public LightingController(SmartLightingService smartLightingService)
+        public LightingController(IMunicipalityService municipalities)
         {
-            _smartLightingService = smartLightingService;
+            _municipalities = municipalities;
         }
 
-        /// <summary>
-        /// Gets the lighting status for a town.
-        /// </summary>
-        /// <param name="town">The name of the town.</param>
-        /// <returns>The lighting status for the town.</returns>
-        [HttpGet("status")]
-        public async Task<IActionResult> GetLightingStatus(string town)
+        /// <summary>Lighting schedule from today (local time) for 1 to 31 days. Public.</summary>
+        [HttpGet("schedule")]
+        public async Task<ActionResult<List<LightingDayDTO>>> GetSchedule([FromQuery][Range(1, 31)] int days = 7)
         {
-            // Get the lighting status for the town and return it
-            var lightingStatus = await _smartLightingService.GetLightingStatusAsync(town);
-            return Ok(lightingStatus);
+            var site = LightingScheduleService.SiteFor(await _municipalities.GetEntityAsync());
+            var today = LightingScheduleService.LocalDate(site, DateTime.UtcNow);
+
+            var rows = LightingScheduleService.GetSchedule(site, today, days);
+            return Ok(rows.Select(LightingDayDTO.From).ToList());
+        }
+
+        /// <summary>The current lighting status, brightness and next change. Public.</summary>
+        [HttpGet("now")]
+        public async Task<ActionResult<LightingNowDTO>> GetNow()
+        {
+            var site = LightingScheduleService.SiteFor(await _municipalities.GetEntityAsync());
+            var now = LightingScheduleService.GetNow(site, DateTime.UtcNow);
+            // Local offset, like the schedule rows.
+
+            return Ok(new LightingNowDTO
+            {
+                Status = now.Status,
+                BrightnessPercent = now.BrightnessPercent,
+                NextChange = now.NextChange == null ? null : new LightingNextChangeDTO
+                {
+                    At = TimeZoneInfo.ConvertTime(
+                        new DateTimeOffset(DateTime.SpecifyKind(now.NextChange.AtUtc, DateTimeKind.Utc)),
+                        site.TimeZone),
+                    ToStatus = now.NextChange.ToStatus,
+                },
+            });
         }
     }
 }

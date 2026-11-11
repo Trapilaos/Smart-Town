@@ -1,30 +1,109 @@
-<div class="container mt-5">
-  <div class="row justify-content-center">
-    <div class="col-md-10">
-      <div class="card shadow-lg">
-        <div class="card-header bg-success text-white text-center">
-          <h2><i class="fas fa-lightbulb"></i> Smart Lighting </h2>
-        </div>
-        <div class="card-body text-center">
-          <div *ngIf="statusMessage === 'Checking...'" class="spinner-border text-success" role="status">
-            <span class="sr-only">Loading...</span>
-          </div>
-          <p *ngIf="statusMessage !== 'Checking...'">
-            <i class="fas"
-              [ngClass]="{'fa-lightbulb-slash': lightingStatus === 'Lights Off', 'fa-lightbulb': lightingStatus === 'Lights On'}"></i>
-            <strong>Lighting Status:</strong> {{ statusMessage }}
-          </p>
-          <p *ngIf="brightnessLevel && lightingStatus === 'Lights On'">
-            <i class="fas fa-sliders-h"></i> <strong>Brightness Level:</strong> {{ brightnessLevel }}
-          </p>
-          <p *ngIf="nextOnTime">
-            <i class="fas fa-clock"></i> <strong>Lights will turn on at:</strong> {{ nextOnTime | date: 'shortTime' }}
-          </p>
-          <p *ngIf="nextOffTime">
-            <i class="fas fa-clock"></i> <strong>Lights will turn off at:</strong> {{ nextOffTime | date: 'shortTime' }}
-          </p>
+<div class="page">
+  <header class="page-header">
+    <h1 class="page-title">Smart lighting</h1>
+    <p class="page-subtitle">Streetlights follow the sun. Times are local to the municipality.</p>
+  </header>
+
+  <section class="mb-4" aria-labelledby="now-heading">
+    <h2 id="now-heading" class="visually-hidden">Lights right now</h2>
+
+    @if (nowLoading) {
+      <div class="loading-state">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="mt-2 mb-0">Loading…</p>
+      </div>
+    } @else if (nowError) {
+      <div class="alert alert-warning" role="alert">The current status could not be loaded. {{ nowError }}</div>
+    } @else if (now) {
+      <div class="card card-elevated">
+        <div class="card-body d-flex flex-wrap align-items-center gap-3">
+          <span class="badge fs-6" [ngClass]="statusBadgeClass(now.status)">{{ statusLabel(now.status) }}</span>
+          <span>Brightness <strong>{{ now.brightnessPercent }}%</strong></span>
+          @if (now.nextChange; as next) {
+            <span class="text-muted ms-md-auto">
+              Next: {{ nextChangeText(next.toStatus) }}
+              at <strong>{{ formatLocalDateTime(next.at) }}</strong>
+            </span>
+          }
         </div>
       </div>
+    }
+  </section>
+
+  <section class="mb-5" aria-labelledby="schedule-heading">
+    <h2 id="schedule-heading" class="h4 mb-3">Next {{ days }} nights</h2>
+
+    @if (scheduleLoading) {
+      <div class="loading-state">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="mt-2 mb-0">Loading…</p>
+      </div>
+    } @else if (scheduleError) {
+      <div class="alert alert-warning" role="alert">The schedule could not be loaded. {{ scheduleError }}</div>
+    } @else if (schedule.length === 0) {
+      <div class="empty-state">
+        <i class="fas fa-lightbulb"></i>
+        <p>No schedule is available yet.</p>
+      </div>
+    } @else {
+      <div class="table-responsive card card-elevated">
+        <table class="table table-hover align-middle mb-0">
+          <caption class="visually-hidden">Lighting schedule for the next {{ days }} nights, in local time</caption>
+          <thead>
+            <tr>
+              <th scope="col">Night of</th>
+              <th scope="col">Sunset</th>
+              <th scope="col">Lights on (100%)</th>
+              <th scope="col">Dimmed (50%)</th>
+              <th scope="col">Sunrise</th>
+              <th scope="col">Lights off</th>
+              <th scope="col" class="text-end">Lit hours</th>
+              <th scope="col" class="text-end">Energy (kWh)</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (day of schedule; track day.date) {
+              <tr>
+                <th scope="row" class="text-nowrap">{{ formatScheduleDate(day.date) }}</th>
+                <td>{{ formatLocalTime(day.sunset) }}</td>
+                <td>{{ formatLocalTime(day.lightsOn) }}</td>
+                <td class="text-nowrap">{{ formatLocalTime(day.dimStart) }}–{{ formatLocalTime(day.dimEnd) }}</td>
+                <td>{{ formatLocalTime(day.sunrise) }}</td>
+                <td>{{ formatLocalTime(day.lightsOff) }}</td>
+                <td class="text-end">{{ formatHours(day.litHours) }}</td>
+                <td class="text-end">{{ day.estimatedKwh | number: '1.0-1' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <p class="small text-muted mt-2 mb-0">Each night starts on the evening of the date shown. Lights off is on the following morning.</p>
+
+      <h3 class="h5 mt-4 mb-3">Lit hours per night</h3>
+      <div class="lighting-chart" role="list" aria-label="Lit hours per night">
+        @for (day of schedule; track day.date) {
+          <div class="lighting-chart__item" role="listitem">
+            <div class="lighting-chart__track">
+              <div class="lighting-chart__bar" [style.height.%]="barHeight(day)"
+                [attr.title]="formatScheduleDate(day.date) + ': ' + formatHours(day.litHours) + ' h'"></div>
+            </div>
+            <div class="lighting-chart__value small">{{ formatHours(day.litHours) }} h</div>
+            <div class="lighting-chart__label small text-muted">{{ formatScheduleDate(day.date) }}</div>
+          </div>
+        }
+      </div>
+    }
+  </section>
+
+  <section class="card card-elevated mb-5" aria-labelledby="explainer-heading">
+    <div class="card-body">
+      <h2 id="explainer-heading" class="h5 card-title">How it is calculated</h2>
+      <ul class="mb-0">
+        <li>Lights switch on at full brightness 10 minutes before sunset.</li>
+        <li>From 00:30 to 05:00 local time they dim to 50%.</li>
+        <li>They switch off 10 minutes after sunrise.</li>
+        <li>Energy is estimated from the number of streetlights, their wattage, and the hours each one spends at each brightness.</li>
+      </ul>
     </div>
-  </div>
+  </section>
 </div>

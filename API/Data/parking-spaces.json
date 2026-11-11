@@ -1,5 +1,8 @@
 [
-    { "Id": 1, "Name": "Parking A", "MaxVehicles": 75, "CurrentVehicles": 0 },
-    { "Id": 2, "Name": "Parking B", "MaxVehicles": 50, "CurrentVehicles": 0 },
-    { "Id": 3, "Name": "Parking C", "MaxVehicles": 60, "CurrentVehicles": 0 }
+    { "Id": 1, "Name": "Parking A", "Address": "Leoforos Vouliagmenis 12, Glyfada", "Type": "Lot", "Latitude": 37.8635, "Longitude": 23.7530, "MaxVehicles": 75, "CurrentVehicles": 0, "HourlyRate": 1.20, "IsActive": true },
+    { "Id": 2, "Name": "Parking B", "Address": "Kanari 4, Glyfada", "Type": "Street", "Latitude": 37.8660, "Longitude": 23.7490, "MaxVehicles": 50, "CurrentVehicles": 0, "HourlyRate": 1.00, "IsActive": true },
+    { "Id": 3, "Name": "Parking C", "Address": "Ethnikis Antistaseos 20, Glyfada", "Type": "Lot", "Latitude": 37.8700, "Longitude": 23.7580, "MaxVehicles": 60, "CurrentVehicles": 0, "HourlyRate": 1.50, "IsActive": true },
+    { "Id": 4, "Name": "Disabled bays, Lazaraki", "Address": "Lazaraki 3, Glyfada", "Type": "Disabled", "Latitude": 37.8580, "Longitude": 23.7610, "MaxVehicles": 6, "CurrentVehicles": 0, "HourlyRate": 0.00, "IsActive": true },
+    { "Id": 5, "Name": "EV charging, Kyprou", "Address": "Kyprou 8, Glyfada", "Type": "EV", "Latitude": 37.8745, "Longitude": 23.7520, "MaxVehicles": 4, "CurrentVehicles": 0, "HourlyRate": 0.80, "IsActive": true },
+    { "Id": 6, "Name": "Parking F", "Address": "Metaxa 15, Glyfada", "Type": "Street", "Latitude": 37.8615, "Longitude": 23.7640, "MaxVehicles": 30, "CurrentVehicles": 0, "HourlyRate": 0.90, "IsActive": true }
 ]

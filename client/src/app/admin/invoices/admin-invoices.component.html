@@ -1,0 +1,95 @@
+<div class="page">
+  <header class="page-header d-flex flex-wrap justify-content-between align-items-end gap-2">
+    <div>
+      <h1 class="page-title">Invoices</h1>
+      <p class="page-subtitle">Issued bills and their payment status.</p>
+    </div>
+    <a routerLink="/admin/invoices/new" class="btn btn-primary">
+      <i class="fas fa-plus me-1" aria-hidden="true"></i>New invoice
+    </a>
+  </header>
+
+  @if (summary) {
+    <div class="row row-cols-2 row-cols-lg-4 g-3 mb-4">
+      <div class="col">
+        <div class="card card-elevated h-100"><div class="card-body">
+          <div class="small text-body-secondary">Unpaid</div>
+          <div class="fs-5 fw-semibold">{{ summary.unpaidCount }}</div>
+          <div class="small">{{ summary.unpaidTotal | currency:'EUR':'symbol':'1.2-2' }}</div>
+        </div></div>
+      </div>
+      <div class="col">
+        <div class="card card-elevated h-100"><div class="card-body">
+          <div class="small text-body-secondary">Overdue</div>
+          <div class="fs-5 fw-semibold">{{ summary.overdueCount }}</div>
+        </div></div>
+      </div>
+      <div class="col">
+        <div class="card card-elevated h-100"><div class="card-body">
+          <div class="small text-body-secondary">Paid this month</div>
+          <div class="fs-5 fw-semibold">{{ summary.paidThisMonthTotal | currency:'EUR':'symbol':'1.2-2' }}</div>
+        </div></div>
+      </div>
+    </div>
+  } @else if (summaryError) {
+    <div class="alert alert-warning" role="alert">The invoice summary is unavailable. {{ summaryError }}</div>
+  }
+
+  <ul class="nav nav-tabs mb-3" role="tablist">
+    @for (tab of tabs; track tab.label) {
+      <li class="nav-item" role="presentation">
+        <button type="button" role="tab" class="nav-link" [class.active]="tab === activeTab"
+          [attr.aria-selected]="tab === activeTab" (click)="selectTab(tab)">{{ tab.label }}</button>
+      </li>
+    }
+  </ul>
+
+  @if (loading) {
+    <div class="loading-state">
+      <div class="spinner-border text-primary" role="status"></div>
+      <p class="mt-2 mb-0">Loading…</p>
+    </div>
+  } @else if (loadError) {
+    <div class="alert alert-danger" role="alert">Invoices are unavailable right now. {{ loadError }}</div>
+  } @else if (invoices.length === 0) {
+    <div class="empty-state">
+      <i class="fas fa-file-invoice"></i>
+      <p>No invoices here yet.</p>
+    </div>
+  } @else {
+    <div class="table-responsive card-elevated">
+      <table class="table table-hover align-middle mb-0">
+        <caption class="visually-hidden">Invoices, {{ activeTab.label.toLowerCase() }}</caption>
+        <thead>
+          <tr>
+            <th scope="col">Invoice</th>
+            <th scope="col">Payer</th>
+            <th scope="col">Description</th>
+            <th scope="col" class="text-end">Amount</th>
+            <th scope="col">Due</th>
+            <th scope="col">Status</th>
+            <th scope="col">Receipt</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (invoice of invoices; track invoice.id) {
+            <tr>
+              <td class="font-monospace small">{{ invoice.invoiceNumber }}</td>
+              <td>
+                {{ invoice.payerName }}
+                @if (invoice.username && invoice.username !== invoice.payerName) {
+                  <div class="small text-muted">&#64;{{ invoice.username }}</div>
+                }
+              </td>
+              <td>{{ invoice.description }}</td>
+              <td class="text-end">{{ invoice.amount | currency:'EUR':'symbol':'1.2-2' }}</td>
+              <td>{{ invoice.dueDate | date:'mediumDate' }}</td>
+              <td><span class="badge" [ngClass]="statusOf(invoice).className">{{ statusOf(invoice).label }}</span></td>
+              <td class="font-monospace small">{{ invoice.receiptReference || '—' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

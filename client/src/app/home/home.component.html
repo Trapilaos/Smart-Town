@@ -1,67 +1,84 @@
-<div class="container-fluid mt-5">
-    <div class="row justify-content-center">
-        <div class="col-12 col-md-8 col-lg-6">
-            <div class="text-center">
-                <h1 class="display-4">Smart-Town</h1>
-                <p class="lead">A Smarter Way for your Town!</p>
-            </div>
-            <div id="carouselExampleIndicators" class="carousel slide" data-bs-ride="carousel">
-                <!-- Added loading="lazy" attribute to images for lazy loading -->
-                <div class="carousel-inner">
-                    <div class="carousel-item active animate__animated animate__fadeIn">
-                        <img src="https://s.hdnux.com/photos/01/31/44/67/23481822/8/rawImage.jpg" class="d-block w-100"
-                            alt="Traffic Management System" loading="lazy">
-                        <div class="carousel-caption d-none d-md-block">
-                            <h5>Traffic Management System</h5>
-                            <p>Optimize traffic flow, monitor and manage parking spaces, and improve overall traffic
-                                performance.</p>
-                        </div>
-                    </div>
-                    <div class="carousel-item animate__animated animate__fadeInLeft">
-                        <img src="https://www.photos-public-domain.com/wp-content/uploads/2011/03/garbage-cans-overflowing.jpg"
-                            class="d-block w-100" alt="Waste Management System" loading="lazy">
-                        <div class="carousel-caption d-none d-md-block">
-                            <h5>Waste Management System</h5>
-                            <p>Monitor waste collection routes, optimize schedules, and monitor bin levels.</p>
-                        </div>
-                    </div>
-                    <div class="carousel-item animate__animated animate__fadeInRight">
-                        <img src="https://assets.the-atlas.com/project_images/9b24309ab43599b57aaa5cc7a445213a-sk1a7168_v3_dh.jpg"
-                            class="d-block w-100" alt="Smart Lighting" loading="lazy">
-                        <div class="carousel-caption d-none d-md-block">
-                            <h5>Smart Lighting</h5>
-                            <p>Implement energy-efficient and remotely controlled lighting solutions for public spaces.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-                <button class="carousel-control-prev" type="button" data-bs-target="#carouselExampleIndicators"
-                    data-bs-slide="prev">
-                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                    <span class="visually-hidden">Previous</span>
-                </button>
-                <button class="carousel-control-next" type="button" data-bs-target="#carouselExampleIndicators"
-                    data-bs-slide="next">
-                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                    <span class="visually-hidden">Next</span>
-                </button>
-            </div>
-        </div>
+<div class="page">
+  <section class="hero rounded-3 bg-primary text-white text-center px-4 py-5 mb-5">
+    <h1 class="hero-title mb-3">Smart-Town</h1>
+    <p class="lead mb-4">Community events, lighting, traffic, waste and payments: your town, in one place.</p>
+
+    @if (accountService.currentUser$ | async; as user) {
+      <a class="btn btn-success btn-lg" [routerLink]="isAdmin(user.roles) ? '/admin' : '/member'">
+        <i class="fas fa-tachometer-alt" aria-hidden="true"></i> Go to dashboard
+      </a>
+    } @else {
+      <div class="d-flex flex-column flex-sm-row justify-content-center gap-2">
+        <button type="button" class="btn btn-success btn-lg" (click)="focusLogin()">
+          <i class="fas fa-sign-in-alt" aria-hidden="true"></i> Log in
+        </button>
+        <button type="button" class="btn btn-outline-light btn-lg" (click)="registerToggle()"
+          [attr.aria-expanded]="registerMode">
+          <i class="fas fa-user-plus" aria-hidden="true"></i> Sign up
+        </button>
+      </div>
+    }
+  </section>
+
+  @if (registerMode && !(accountService.currentUser$ | async)) {
+    <div class="row justify-content-center mb-5">
+      <div class="col-12 col-md-8 col-lg-6">
+        <app-register (cancelRegister)="cancelRegisterMode($event)"></app-register>
+      </div>
     </div>
-    <div class="row justify-content-center mt-5">
-        <div class="col-12 col-md-8 col-lg-6">
-            <div class="text-center">
-                <div class="mt-4">
-                    <button *ngIf="!(accountService.currentUser$ | async)" (click)="registerToggle()"
-                        class="btn btn-primary btn-lg me-2"><i class="fas fa-user-plus"></i> Register</button>
-                    <button routerLink="/home/learn-more" class="btn btn-outline-primary btn-lg"><i
-                            class="fas fa-info-circle"></i> Learn More</button>
-                </div>
-            </div>
+  }
+
+  <h2 class="h4 mb-3">What you can do</h2>
+  <div class="row g-4">
+    <div class="col-12 col-md-6 col-lg-4">
+      <div class="card card-elevated h-100">
+        <div class="card-body">
+          <i class="fas fa-users fa-2x text-primary mb-3" aria-hidden="true"></i>
+          <h3 class="h5">Community</h3>
+          <p class="text-muted">Find local events, show your interest and share comments with your neighbours.</p>
+          <a routerLink="/member" class="stretched-link">Open Community</a>
         </div>
+      </div>
     </div>
-    <div class="row justify-content-center mt-5" *ngIf="registerMode && !(accountService.currentUser$ | async)">
-        <div class="col-12 col-md-8 col-lg-6">
-            <app-register (cancelRegister)="cancelRegisterMode($event)"></app-register>
+    <div class="col-12 col-md-6 col-lg-4">
+      <div class="card card-elevated h-100">
+        <div class="card-body">
+          <i class="fas fa-lightbulb fa-2x text-primary mb-3" aria-hidden="true"></i>
+          <h3 class="h5">Lighting</h3>
+          <p class="text-muted">Check whether street lights are on and see sunrise, sunset and the weather.</p>
+          <a routerLink="/lighting" class="stretched-link">Open Lighting</a>
         </div>
+      </div>
     </div>
+    <div class="col-12 col-md-6 col-lg-4">
+      <div class="card card-elevated h-100">
+        <div class="card-body">
+          <i class="fas fa-car fa-2x text-primary mb-3" aria-hidden="true"></i>
+          <h3 class="h5">Traffic &amp; Parking</h3>
+          <p class="text-muted">See how busy parking spaces are and reserve one for a set time.</p>
+          <a routerLink="/traffic" class="stretched-link">Open Traffic &amp; Parking</a>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-6 col-lg-4">
+      <div class="card card-elevated h-100">
+        <div class="card-body">
+          <i class="fas fa-trash-alt fa-2x text-primary mb-3" aria-hidden="true"></i>
+          <h3 class="h5">Waste</h3>
+          <p class="text-muted">Check how full the public bins are and when they were last emptied.</p>
+          <a routerLink="/waste" class="stretched-link">Open Waste</a>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-6 col-lg-4">
+      <div class="card card-elevated h-100">
+        <div class="card-body">
+          <i class="fas fa-credit-card fa-2x text-primary mb-3" aria-hidden="true"></i>
+          <h3 class="h5">Payments</h3>
+          <p class="text-muted">Look up a municipal invoice by its number and pay it online.</p>
+          <a routerLink="/pay" class="stretched-link">Open Payments</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

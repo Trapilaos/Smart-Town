@@ -1,6 +1,29 @@
-@API_HostAddress = http://localhost:5280
+@API_HostAddress = http://localhost:5000
+@token = paste-a-token-from-the-login-response-here
 
-GET {{API_HostAddress}}/weatherforecast/
-Accept: application/json
+### OpenAPI document (Development only)
+GET {{API_HostAddress}}/openapi/v1.json
 
-###
+### Log in (seeded Development users, see Data/UserSeedData.json)
+POST {{API_HostAddress}}/api/account/login
+Content-Type: application/json
+
+{ "username": "lisa", "password": "Pa$$w0rd" }
+
+### Public: list parking spaces
+GET {{API_HostAddress}}/api/parking
+
+### Reserve a parking space (authenticated)
+POST {{API_HostAddress}}/api/parking/reserve
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "parkingSpaceId": 1, "reservationTime": "2030-01-01T10:00:00Z", "duration": 60 }
+
+### Check one of your invoices (authenticated)
+GET {{API_HostAddress}}/api/payment/check/INV1-01
+Authorization: Bearer {{token}}
+
+### Moderation queue (Admin only)
+GET {{API_HostAddress}}/api/comments
+Authorization: Bearer {{token}}

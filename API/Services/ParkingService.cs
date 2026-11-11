@@ -1,143 +1,269 @@
 using API.Data;
+using API.DTOs;
 using API.Entities;
+using API.Errors;
+using API.Helpers;
 using API.Interfaces;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using System.Data;
 
 namespace API.Services
 {
     public class ParkingService : IParkingService
     {
-        private readonly DataContext _context;
+        public const string OutsideBoundaryMessage = "Parking space must be inside the municipality boundary";
 
-        public ParkingService(DataContext context)
+        private readonly DataContext _context;
+        private readonly IMunicipalityService _municipalities;
+        private readonly ILogger<ParkingService> _logger;
+
+        /// <summary>One reservation at a time per process. See ReserveParkingSpaceAsync.</summary>
+        private static readonly SemaphoreSlim ReservationGate = new(1, 1);
+
+        public ParkingService(DataContext context, IMunicipalityService municipalities, ILogger<ParkingService> logger)
         {
             _context = context;
+            _municipalities = municipalities;
+            _logger = logger;
         }
 
-        /// <summary>
-        /// Retrieves all parking spaces and cleans up old reservations.
-        /// </summary>
-        /// <returns>A list of parking spaces.</returns>
-        public async Task<List<ParkingSpace>> GetParkingSpacesAsync()
+        /// <summary>Read-only. Occupancy is computed from the reservations at the moment of the call.</summary>
+        public async Task<List<ParkingSpaceDTO>> GetParkingSpacesAsync()
         {
-            // Clean up old reservations
-            await CleanUpReservationsAsync();
+            var spaces = await _context.ParkingSpaces.AsNoTracking()
+                .Where(p => p.IsActive)
+                .OrderBy(p => p.Id)
+                .ToListAsync();
 
-            return await _context.ParkingSpaces.ToListAsync();
+            return await ToDtosAsync(spaces);
         }
 
         /// <summary>
-        /// Reserves a parking space for a user.
+        /// Reserves a space if its peak occupancy and the user's own bookings allow it. The check and the insert
+        /// run as one unit. The write lock is taken up front (BEGIN IMMEDIATE), so two bookings cannot both see
+        /// the last free slot. The process-wide gate is a second guard: the app runs as a single instance, and it
+        /// keeps concurrent calls from contending for the SQLite write lock.
         /// </summary>
-        /// <param name="userId">The user's ID.</param>
-        /// <param name="parkingSpaceId">The parking space's ID.</param>
-        /// <param name="reservationTime">The reservation time.</param>
-        /// <param name="duration">The reservation duration in minutes.</param>
-        /// <returns>True if the reservation was successful, false otherwise.</returns>
         public async Task<(bool Success, DateTime? StartTime, DateTime? EndTime)> ReserveParkingSpaceAsync(string userId, int parkingSpaceId, DateTime reservationTime, int duration)
         {
+            await ReservationGate.WaitAsync();
             try
             {
-                Console.WriteLine($"ReserveParkingSpaceAsync called with UserId={userId}, ParkingSpaceId={parkingSpaceId}, ReservationTime={reservationTime}, Duration={duration}");
-
-                var parkingSpace = await _context.ParkingSpaces.FindAsync(parkingSpaceId);
-                if (parkingSpace == null)
+                await _context.Database.OpenConnectionAsync();
+                var connection = (SqliteConnection)_context.Database.GetDbConnection();
+                var dbTransaction = connection.BeginTransaction(IsolationLevel.Serializable, deferred: false);
+                await using var transaction = await _context.Database.UseTransactionAsync(dbTransaction);
+                try
                 {
-                    Console.WriteLine("Parking space not found");
-                    return (false, null, null);
+                    var result = await ReserveInsideTransactionAsync(userId, parkingSpaceId, reservationTime, duration);
+                    await transaction.CommitAsync();
+                    return result;
                 }
-
-                if (parkingSpace.CurrentVehicles >= parkingSpace.MaxVehicles)
+                catch
                 {
-                    Console.WriteLine("Parking space is full");
-                    return (false, null, null);
+                    await transaction.RollbackAsync();
+                    throw;
                 }
-
-                var existingReservations = await _context.Reservations
-                    .Where(r => r.ParkingSpaceId == parkingSpaceId &&
-                                r.ReservationTime < reservationTime.AddMinutes(duration) && r.ReservationTime.AddMinutes(r.Duration) > reservationTime &&
-                                r.UserId == userId)
-                    .ToListAsync();
-
-                if (existingReservations.Any())
-                {
-                    Console.WriteLine("User already has an overlapping reservation");
-                    return (false, null, null);
-                }
-
-                var reservation = new Reservation
-                {
-                    UserId = userId,
-                    ParkingSpaceId = parkingSpaceId,
-                    ReservationTime = reservationTime,
-                    Duration = duration
-                };
-
-                parkingSpace.CurrentVehicles++;
-                _context.Reservations.Add(reservation);
-                await _context.SaveChangesAsync();
-
-                Console.WriteLine("Reservation made successfully");
-
-                _ = DecrementVehicleAfterDuration(parkingSpaceId, duration);
-
-                var endTime = reservationTime.AddMinutes(duration);
-                return (true, reservationTime, endTime);
             }
-            catch (Exception ex)
+            finally
             {
-                Console.WriteLine($"Error in ReserveParkingSpaceAsync: {ex.Message}");
+                ReservationGate.Release();
+            }
+        }
+
+        private async Task<(bool Success, DateTime? StartTime, DateTime? EndTime)> ReserveInsideTransactionAsync(string userId, int parkingSpaceId, DateTime reservationTime, int duration)
+        {
+            var parkingSpace = await _context.ParkingSpaces.FindAsync(parkingSpaceId);
+            if (parkingSpace == null || !parkingSpace.IsActive)
+            {
+                _logger.LogInformation("Reservation rejected: parking space {Id} not found or inactive", parkingSpaceId);
                 return (false, null, null);
             }
+
+            var endTime = reservationTime.AddMinutes(duration);
+
+            // All non-expired reservations for this space (any user). Loaded into memory because
+            // SQLite cannot translate DateTime arithmetic on columns.
+            var spaceReservations = await _context.Reservations
+                .Where(r => r.ParkingSpaceId == parkingSpaceId)
+                .ToListAsync();
+
+            if (PeakOccupancy(spaceReservations, reservationTime, endTime) >= parkingSpace.MaxVehicles)
+            {
+                _logger.LogInformation("Reservation rejected: parking space {Id} is full for the requested window", parkingSpaceId);
+                return (false, null, null);
+            }
+
+            // Reservations are few and short-lived, so the overlap check is done in memory
+            // (SQLite cannot translate DateTime arithmetic on columns).
+            var userReservations = await _context.Reservations
+                .Where(r => r.UserId == userId && r.ParkingSpaceId == parkingSpaceId)
+                .ToListAsync();
+
+            if (userReservations.Any(r => r.ReservationTime < endTime && r.ReservationTime.AddMinutes(r.Duration) > reservationTime))
+            {
+                _logger.LogInformation("Reservation rejected: user already has an overlapping reservation");
+                return (false, null, null);
+            }
+
+            _context.Reservations.Add(new Reservation
+            {
+                UserId = userId,
+                ParkingSpaceId = parkingSpaceId,
+                ReservationTime = reservationTime,
+                Duration = duration
+            });
+
+            await _context.SaveChangesAsync();
+
+            return (true, reservationTime, endTime);
         }
 
         public async Task<Reservation> GetActiveReservationAsync(string userId)
         {
-            return await _context.Reservations
-                .Where(r => r.UserId == userId && r.ReservationTime.AddMinutes(r.Duration) > DateTime.UtcNow)
-                .OrderBy(r => r.ReservationTime)
-                .FirstOrDefaultAsync();
-        }
-
-        /// <summary>
-        /// Cleans up expired reservations and decrements the current vehicles in the parking spaces.
-        /// </summary>
-        private async Task CleanUpReservationsAsync()
-        {
-            var expiredReservations = await _context.Reservations
-                .Where(r => r.ReservationTime.AddMinutes(r.Duration) < DateTime.Now)
+            var now = DateTime.UtcNow;
+            var reservations = await _context.Reservations
+                .AsNoTracking()
+                .Where(r => r.UserId == userId)
                 .ToListAsync();
 
-            foreach (var reservation in expiredReservations)
-            {
-                var parkingSpace = await _context.ParkingSpaces.FindAsync(reservation.ParkingSpaceId);
-                if (parkingSpace != null)
-                {
-                    parkingSpace.CurrentVehicles--;
-                }
+            return reservations
+                .Where(r => r.ReservationTime.AddMinutes(r.Duration) > now)
+                .OrderBy(r => r.ReservationTime)
+                .FirstOrDefault();
+        }
 
-                _context.Reservations.Remove(reservation);
-            }
+        /// <summary>Read-only, like <see cref="GetParkingSpacesAsync"/>.</summary>
+        public async Task<List<ParkingSpaceDTO>> GetAllForAdminAsync()
+        {
+            var spaces = await _context.ParkingSpaces.AsNoTracking().OrderBy(p => p.Id).ToListAsync();
+            return await ToDtosAsync(spaces);
+        }
 
+        public async Task<ParkingSpaceDTO> CreateAsync(ParkingSpaceInputDTO input)
+        {
+            await EnsureInsideBoundaryAsync(input.Latitude, input.Longitude);
+
+            var space = new ParkingSpace();
+            Apply(space, input);
+            _context.ParkingSpaces.Add(space);
             await _context.SaveChangesAsync();
+
+            return ParkingSpaceDTO.From(space, activeNow: 0, held: 0);
+        }
+
+        public async Task<ParkingSpaceDTO> UpdateAsync(int id, ParkingSpaceInputDTO input)
+        {
+            var space = await _context.ParkingSpaces.FindAsync(id);
+            if (space == null) return null;
+
+            await EnsureInsideBoundaryAsync(input.Latitude, input.Longitude);
+
+            Apply(space, input);
+            await _context.SaveChangesAsync();
+
+            return (await ToDtosAsync(new List<ParkingSpace> { space })).Single();
+        }
+
+        public async Task<bool> DeactivateAsync(int id)
+        {
+            var space = await _context.ParkingSpaces.FindAsync(id);
+            if (space == null) return false;
+
+            space.IsActive = false;
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<List<ParkingReservationDTO>> GetReservationsAsync(int id)
+        {
+            if (!await _context.ParkingSpaces.AnyAsync(p => p.Id == id)) return null;
+
+            var now = DateTime.UtcNow;
+            var reservations = (await _context.Reservations.AsNoTracking()
+                    .Where(r => r.ParkingSpaceId == id)
+                    .ToListAsync())
+                .Where(r => r.ReservationTime.AddMinutes(r.Duration) > now)
+                .OrderBy(r => r.ReservationTime)
+                .ToList();
+
+            var usernames = await UsernameLookup.LoadAsync(_context);
+
+            return reservations.Select(r => new ParkingReservationDTO
+            {
+                Id = r.Id,
+                Username = usernames.GetValueOrDefault(r.UserId) ?? "unknown",
+                StartTime = r.ReservationTime,
+                EndTime = r.ReservationTime.AddMinutes(r.Duration),
+                IsActive = r.ReservationTime <= now,
+            }).ToList();
+        }
+
+        private async Task EnsureInsideBoundaryAsync(double lat, double lng)
+        {
+            if (!await _municipalities.IsInsideBoundaryAsync(lat, lng))
+                throw new DomainValidationException(OutsideBoundaryMessage);
+        }
+
+        private static void Apply(ParkingSpace space, ParkingSpaceInputDTO input)
+        {
+            space.Name = input.Name.Trim();
+            space.Address = string.IsNullOrWhiteSpace(input.Address) ? null : input.Address.Trim();
+            space.Type = Enum.Parse<ParkingType>(input.Type);
+            space.Latitude = input.Latitude;
+            space.Longitude = input.Longitude;
+            space.MaxVehicles = input.MaxVehicles;
+            space.HourlyRate = input.HourlyRate;
+            space.IsActive = input.IsActive;
         }
 
         /// <summary>
-        /// Decrements the current vehicles in a parking space after the reservation duration.
+        /// Occupancy for each space, computed now and never stored. Active: started and not yet ended.
+        /// Held: not yet ended, including bookings that start later. Expired rows are ignored here and removed
+        /// by ReservationCleanupService.
         /// </summary>
-        /// <param name="parkingSpaceId">The parking space's ID.</param>
-        /// <param name="duration">The reservation duration in minutes.</param>
-        private async Task DecrementVehicleAfterDuration(int parkingSpaceId, int duration)
+        private async Task<List<ParkingSpaceDTO>> ToDtosAsync(IReadOnlyCollection<ParkingSpace> spaces)
         {
-            // Wait for the duration time in milliseconds
-            await Task.Delay(duration * 60 * 1000);
+            var now = DateTime.UtcNow;
+            // Loaded into memory because SQLite cannot translate DateTime arithmetic on columns.
+            var live = (await _context.Reservations.AsNoTracking().ToListAsync())
+                .Where(r => r.ReservationTime.AddMinutes(r.Duration) > now)
+                .ToList();
 
-            var parkingSpace = await _context.ParkingSpaces.FindAsync(parkingSpaceId);
-            if (parkingSpace != null)
-            {
-                parkingSpace.CurrentVehicles--;
-                await _context.SaveChangesAsync();
-            }
+            var activeNow = live.Where(r => r.ReservationTime <= now)
+                .GroupBy(r => r.ParkingSpaceId)
+                .ToDictionary(g => g.Key, g => g.Count());
+            var held = live
+                .GroupBy(r => r.ParkingSpaceId)
+                .ToDictionary(g => g.Key, g => g.Count());
+
+            return spaces.Select(s => ParkingSpaceDTO.From(s,
+                activeNow.GetValueOrDefault(s.Id),
+                held.GetValueOrDefault(s.Id))).ToList();
+        }
+
+        /// <summary>
+        /// The largest number of reservations parked at the same moment inside [start, end).
+        /// Occupancy only rises when a reservation begins, so it is enough to sample the window start
+        /// and every reservation start that falls inside the window. Intervals are half-open, so a
+        /// booking that ends exactly when the new one starts does not overlap it.
+        /// </summary>
+        private static int PeakOccupancy(IReadOnlyCollection<Reservation> reservations, DateTime start, DateTime end)
+        {
+            var overlapping = reservations
+                .Where(r => r.ReservationTime < end && r.ReservationTime.AddMinutes(r.Duration) > start)
+                .ToList();
+
+            var samplePoints = overlapping
+                .Select(r => r.ReservationTime)
+                .Where(t => t > start)
+                .Append(start);
+
+            return samplePoints
+                .Select(t => overlapping.Count(r => r.ReservationTime <= t && t < r.ReservationTime.AddMinutes(r.Duration)))
+                .DefaultIfEmpty(0)
+                .Max();
         }
     }
 }

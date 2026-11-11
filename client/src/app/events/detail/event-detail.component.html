@@ -1,0 +1,80 @@
+<div class="page">
+  <nav aria-label="Breadcrumb" class="mb-3">
+    <a routerLink="/events" class="small"><i class="fas fa-arrow-left"></i> All events</a>
+  </nav>
+
+  @if (loading) {
+    <div class="loading-state">
+      <div class="spinner-border text-primary" role="status"></div>
+      <p class="mt-2 mb-0">Loading…</p>
+    </div>
+  } @else if (notFound) {
+    <div class="empty-state">
+      <i class="fas fa-calendar-times"></i>
+      <p>This event could not be found. It may have been removed.</p>
+      <a routerLink="/events" class="btn btn-outline-primary btn-sm">Back to events</a>
+    </div>
+  } @else if (error) {
+    <div class="alert alert-warning" role="alert">The event could not be loaded. {{ error }}</div>
+  } @else if (event) {
+    <article>
+      <header class="page-header">
+        <p class="small text-muted mb-1">
+          <span class="badge text-bg-light border me-2">{{ event.category }}</span>
+          @if (isPastEvent(event)) {
+            <span class="badge bg-secondary">Past</span>
+          }
+        </p>
+        <h1 class="page-title">{{ event.title }}</h1>
+      </header>
+
+      <div class="row g-4">
+        <div class="col-lg-7">
+          @if (event.photoUrl) {
+            <img class="img-fluid rounded mb-3 event-photo" [src]="event.photoUrl" [alt]="event.title">
+          }
+          <p class="event-description">{{ event.description }}</p>
+        </div>
+
+        <div class="col-lg-5">
+          <div class="card card-elevated">
+            <div class="card-body">
+              <dl class="row mb-3 small">
+                <dt class="col-4">When</dt>
+                <dd class="col-8 mb-2">
+                  {{ event.date | date: 'EEE d MMM y, HH:mm':'Europe/Athens' }}
+                  @if (event.endDate) {
+                    <br>to {{ event.endDate | date: 'EEE d MMM y, HH:mm':'Europe/Athens' }}
+                  }
+                </dd>
+                @if (event.location) {
+                  <dt class="col-4">Where</dt>
+                  <dd class="col-8 mb-2">{{ event.location }}</dd>
+                }
+                <dt class="col-4">Interested</dt>
+                <dd class="col-8 mb-0">{{ event.interestedCount }}</dd>
+              </dl>
+
+              @if (!loggedIn) {
+                <p class="small text-muted mb-0">Log in to show interest</p>
+              } @else if (!isPastEvent(event)) {
+                <button type="button" class="btn w-100"
+                  [class.btn-primary]="!event.isInterested" [class.btn-outline-secondary]="event.isInterested"
+                  [disabled]="interestPending"
+                  (click)="toggleInterest()">
+                  <i class="fas" [class.fa-heart]="!event.isInterested" [class.fa-times]="event.isInterested"></i>
+                  {{ interestLabel(event.isInterested) }}
+                </button>
+              }
+            </div>
+          </div>
+
+          @if (markers.length > 0) {
+            <h2 class="h5 mt-4 mb-2">Location</h2>
+            <app-map [markers]="markers" height="280px"></app-map>
+          }
+        </div>
+      </div>
+    </article>
+  }
+</div>

@@ -1,6 +1,9 @@
 using API.Data;
+using API.DTOs;
 using API.Entities;
+using API.Extensions;
 using API.Interfaces;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
 namespace API.Services
@@ -14,59 +17,151 @@ namespace API.Services
             _context = context;
         }
 
-        /// <summary>
-        /// Creates a new event in the database.
-        /// </summary>
-        /// <param name="newEvent">The event object to be created.</param>
-        /// <returns>The newly created event object.</returns>
-        public async Task<Event> CreateEventAsync(Event newEvent)
+        public async Task<List<EventDTO>> GetPublishedAsync(DateTime? from, EventCategory? category, bool includePast, string viewerUserId)
         {
-            _context.Events.Add(newEvent);
-            await _context.SaveChangesAsync();
-            return newEvent;
+            var query = _context.Events.AsNoTracking().Where(e => e.IsPublished);
+
+            if (from.HasValue) query = query.Where(e => e.Date >= from.Value);
+            if (category.HasValue) query = query.Where(e => e.Category == category.Value);
+            if (!includePast)
+            {
+                // An event with an end date stays listed until it ends.
+                var now = DateTime.UtcNow;
+                query = query.Where(e => e.Date >= now || (e.EndDate != null && e.EndDate >= now));
+            }
+
+            var events = await query.OrderBy(e => e.Date).ThenBy(e => e.Id).ToListAsync();
+            return await BuildDtosAsync(events, viewerUserId);
         }
 
-        /// <summary>
-        /// Retrieves all events from the database.
-        /// </summary>
-        /// <returns>A list of event objects.</returns>
-        public async Task<List<Event>> GetEventsAsync()
+        public async Task<EventDTO> GetPublishedByIdAsync(int id, string viewerUserId)
         {
-            return await _context.Events.ToListAsync();
-        }
-
-        /// <summary>
-        /// Declares a user's interest in an event.
-        /// </summary>
-        /// <param name="eventId">The ID of the event.</param>
-        /// <param name="userId">The ID of the user.</param>
-        /// <returns>The updated event object, or null if the event doesn't exist.</returns>
-        public async Task<Event> DeclareInterestAsync(int eventId, string userId)
-        {
-            var ev = await _context.Events.FindAsync(eventId);
+            var ev = await _context.Events.AsNoTracking().FirstOrDefaultAsync(e => e.Id == id && e.IsPublished);
             if (ev == null) return null;
 
-            if (ev.InterestedUsers.Contains(userId)) return ev;
+            return (await BuildDtosAsync(new List<Event> { ev }, viewerUserId)).Single();
+        }
 
-            ev.InterestedUsers.Add(userId);
-            await _context.SaveChangesAsync();
+        public async Task<EventDTO> SetInterestAsync(int eventId, string userId, bool interested)
+        {
+            var published = await _context.Events.AsNoTracking().AnyAsync(e => e.Id == eventId && e.IsPublished);
+            if (!published) return null;
 
-            return ev;
+            var existing = await _context.EventInterests.FirstOrDefaultAsync(i => i.EventId == eventId && i.UserId == userId);
+            if (interested && existing == null)
+            {
+                await AddInterestAsync(eventId, userId);
+            }
+            else if (!interested && existing != null)
+            {
+                _context.EventInterests.Remove(existing);
+                await _context.SaveChangesAsync();
+            }
+
+            return await GetPublishedByIdAsync(eventId, userId);
         }
 
         /// <summary>
-        /// Deletes an event from the database.
+        /// Two quick clicks can both pass the existence check. The second insert then hits the (EventId, UserId)
+        /// primary key. That means the interest is already recorded, so it is not an error.
         /// </summary>
-        /// <param name="eventId">The ID of the event to be deleted.</param>
-        /// <returns>True if the event was deleted successfully, false otherwise.</returns>
-        public async Task<bool> DeleteEventAsync(int eventId)
+        private async Task AddInterestAsync(int eventId, string userId)
         {
-            var ev = await _context.Events.FindAsync(eventId);
+            var interest = new EventInterest { EventId = eventId, UserId = userId, CreatedAt = DateTime.UtcNow };
+            _context.EventInterests.Add(interest);
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex) when (IsDuplicateInterest(ex))
+            {
+                _context.Entry(interest).State = EntityState.Detached;
+            }
+        }
+
+        /// <summary>SQLite's primary-key violation (extended code 1555), which is how a duplicate interest shows up.</summary>
+        private static bool IsDuplicateInterest(DbUpdateException ex) =>
+            ex.InnerException is SqliteException { SqliteExtendedErrorCode: 1555 };
+
+        public async Task<List<AdminEventDTO>> GetAllForAdminAsync()
+        {
+            var events = await _context.Events.AsNoTracking().OrderByDescending(e => e.Date).ToListAsync();
+            var counts = await InterestCountsAsync(events.Select(e => e.Id).ToList());
+            return events.Select(e => AdminEventDTO.From(e, counts.GetValueOrDefault(e.Id))).ToList();
+        }
+
+        public async Task<AdminEventDTO> CreateAsync(EventInputDTO input)
+        {
+            var ev = new Event { CreatedAt = DateTime.UtcNow };
+            Apply(ev, input);
+            _context.Events.Add(ev);
+            await _context.SaveChangesAsync();
+
+            return AdminEventDTO.From(ev, 0);
+        }
+
+        public async Task<AdminEventDTO> UpdateAsync(int id, EventInputDTO input)
+        {
+            var ev = await _context.Events.FindAsync(id);
+            if (ev == null) return null;
+
+            Apply(ev, input);
+            await _context.SaveChangesAsync();
+
+            var counts = await InterestCountsAsync(new List<int> { id });
+            return AdminEventDTO.From(ev, counts.GetValueOrDefault(id));
+        }
+
+        public async Task<bool> DeleteAsync(int id)
+        {
+            var ev = await _context.Events.FindAsync(id);
             if (ev == null) return false;
 
+            await _context.EventInterests.Where(i => i.EventId == id).ExecuteDeleteAsync();
             _context.Events.Remove(ev);
             await _context.SaveChangesAsync();
             return true;
+        }
+
+        private static void Apply(Event ev, EventInputDTO input)
+        {
+            ev.Title = input.Title.Trim();
+            ev.Description = Clean(input.Description);
+            ev.PhotoUrl = Clean(input.PhotoUrl);
+            ev.Location = Clean(input.Location);
+            ev.Latitude = input.Lat;
+            ev.Longitude = input.Lng;
+            ev.Date = input.Date.ToUtc();
+            ev.EndDate = input.EndDate?.ToUtc();
+            ev.Category = Enum.Parse<EventCategory>(input.Category);
+            ev.IsPublished = input.IsPublished;
+        }
+
+        private static string Clean(string value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+        private async Task<Dictionary<int, int>> InterestCountsAsync(List<int> eventIds)
+        {
+            return await _context.EventInterests.AsNoTracking()
+                .Where(i => eventIds.Contains(i.EventId))
+                .GroupBy(i => i.EventId)
+                .Select(g => new { EventId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.EventId, x => x.Count);
+        }
+
+        private async Task<List<EventDTO>> BuildDtosAsync(List<Event> events, string viewerUserId)
+        {
+            var ids = events.Select(e => e.Id).ToList();
+            var counts = await InterestCountsAsync(ids);
+
+            var mine = viewerUserId == null
+                ? new HashSet<int>()
+                : (await _context.EventInterests.AsNoTracking()
+                    .Where(i => i.UserId == viewerUserId && ids.Contains(i.EventId))
+                    .Select(i => i.EventId)
+                    .ToListAsync()).ToHashSet();
+
+            return events.Select(e => EventDTO.From(e, counts.GetValueOrDefault(e.Id), mine.Contains(e.Id))).ToList();
         }
     }
 }

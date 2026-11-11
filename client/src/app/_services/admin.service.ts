@@ -1,8 +1,14 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { environment } from 'src/environments/environment';
-import { User } from '../_models/user';
 import { Observable } from 'rxjs';
+
+/** A row from GET admin/users-with-roles. */
+export interface ManagedUser {
+  id: number;
+  username: string;
+  roles: string[];
+}
 
 @Injectable({
   providedIn: 'root'
@@ -12,12 +18,12 @@ export class AdminService {
 
   constructor(private http: HttpClient) {}
 
-  getUsersWithRoles(): Observable<Partial<User[]>> {
-    return this.http.get<Partial<User[]>>(`${this.baseUrl}admin/users-with-roles`);
+  getUsersWithRoles(): Observable<ManagedUser[]> {
+    return this.http.get<ManagedUser[]>(`${this.baseUrl}admin/users-with-roles`);
   }
 
   updateUserRoles(username: string, roles: string[]): Observable<object> {
-    const rolesString = roles.join(',');
-    return this.http.post(`${this.baseUrl}admin/edit-roles/${username}?roles=${rolesString}`, {});
+    const params = new HttpParams().set('roles', roles.join(','));
+    return this.http.post(`${this.baseUrl}admin/edit-roles/${encodeURIComponent(username)}`, {}, { params });
   }
 }

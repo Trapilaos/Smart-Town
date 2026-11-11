@@ -1,52 +1,63 @@
 <nav class="navbar navbar-expand-lg navbar-dark fixed-top bg-primary" data-bs-theme="dark">
   <div class="container">
-    <a class="navbar-brand navbar-brand-custom" routerLink="/" routerLinkActive="active">Smart-Town</a>
+    <a class="navbar-brand navbar-brand-custom" routerLink="/" routerLinkActive="active" (click)="closeMenu()">Smart-Town</a>
 
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse"
-      aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+    <button class="navbar-toggler" type="button" (click)="toggleMenu()"
+      aria-controls="navbarCollapse" [attr.aria-expanded]="isMenuOpen" aria-label="Toggle navigation">
       <span class="navbar-toggler-icon"></span>
     </button>
 
-    <div class="collapse navbar-collapse" id="navbarCollapse">
-      <ul class="navbar-nav me-auto mb-2 mb-md-0">
-        <ng-container *ngIf="(accountService.currentUser$ | async) as user">
-          <ng-container *ngIf="user.roles.includes('Admin'); else userLinks">
-            <li class="nav-item"><a class="nav-link" routerLink="/admin" routerLinkActive="active">Admin Dashboard</a>
+    <div class="collapse navbar-collapse" id="navbarCollapse" [class.show]="isMenuOpen">
+      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+        <li class="nav-item"><a class="nav-link" routerLink="/events" routerLinkActive="active" (click)="closeMenu()">Events</a></li>
+        <li class="nav-item"><a class="nav-link" routerLink="/parking" routerLinkActive="active" (click)="closeMenu()">Parking</a></li>
+        <li class="nav-item"><a class="nav-link" routerLink="/waste" routerLinkActive="active" (click)="closeMenu()">Waste map</a></li>
+        <li class="nav-item"><a class="nav-link" routerLink="/lighting" routerLinkActive="active" (click)="closeMenu()">Lighting</a></li>
+        <li class="nav-item"><a class="nav-link" routerLink="/pay" routerLinkActive="active" (click)="closeMenu()">Pay a bill</a></li>
+
+        @if (accountService.currentUser$ | async; as user) {
+          @if (isAdmin(user)) {
+            <li class="nav-item dropdown" dropdown>
+              <a class="nav-link dropdown-toggle" role="button" dropdownToggle>Admin</a>
+              <div class="dropdown-menu" data-bs-theme="light" *dropdownMenu>
+                <a class="dropdown-item" routerLink="/admin" [routerLinkActiveOptions]="{ exact: true }" routerLinkActive="active fw-semibold" (click)="closeMenu()">Dashboard</a>
+                <a class="dropdown-item" routerLink="/admin/municipality" routerLinkActive="active fw-semibold" (click)="closeMenu()">Municipality</a>
+                <a class="dropdown-item" routerLink="/admin/bins" routerLinkActive="active fw-semibold" (click)="closeMenu()">Waste bins</a>
+                <a class="dropdown-item" routerLink="/admin/route" routerLinkActive="active fw-semibold" (click)="closeMenu()">Collection route</a>
+                <a class="dropdown-item" routerLink="/admin/parking" routerLinkActive="active fw-semibold" (click)="closeMenu()">Parking</a>
+                <a class="dropdown-item" routerLink="/admin/events" routerLinkActive="active fw-semibold" (click)="closeMenu()">Events</a>
+                <a class="dropdown-item" routerLink="/admin/invoices" routerLinkActive="active fw-semibold" (click)="closeMenu()">Invoices</a>
+                <a class="dropdown-item" routerLink="/admin/users" routerLinkActive="active fw-semibold" (click)="closeMenu()">Users</a>
+                <a class="dropdown-item" routerLink="/admin/audit" routerLinkActive="active fw-semibold" (click)="closeMenu()">Audit log</a>
+              </div>
             </li>
-            <li class="nav-item"><a class="nav-link" routerLink="/admin/create-event" routerLinkActive="active">Create
-                Event</a></li>
-            <li class="nav-item"><a class="nav-link" routerLink="/admin/user-management"
-                routerLinkActive="active">Manage Users</a></li>
-          </ng-container>
-          <ng-template #userLinks>
-            <li class="nav-item"><a class="nav-link" routerLink="/member" routerLinkActive="active">Community</a></li>
-            <li class="nav-item"><a class="nav-link" routerLink="/lighting" routerLinkActive="active">Lighting</a></li>
-            <li class="nav-item"><a class="nav-link" routerLink="/traffic" routerLinkActive="active">Traffic</a></li>
-            <li class="nav-item"><a class="nav-link" routerLink="/trash" routerLinkActive="active">Trash</a></li>
-            <li class="nav-item"><a class="nav-link" routerLink="/pay" routerLinkActive="active">Payments</a></li>
-          </ng-template>
-        </ng-container>
-        <li class="nav-item"><a class="nav-link" routerLink="/errors" routerLinkActive="active">Errors</a></li>
+          }
+        }
       </ul>
 
-      <div class="dropdown" *ngIf="(accountService.currentUser$ | async) as user" dropdown>
-        <a class="dropdown-toggle text-light text-decoration-none" dropdownToggle>
-          Welcome {{user.username | titlecase}}
-        </a>
-        <div class="dropdown-menu show" *dropdownMenu>
-          <a class="dropdown-item" routerLink="/profile">Edit Profile</a>
-          <a class="dropdown-item" (click)="logout()">Logout</a>
+      @if (accountService.currentUser$ | async; as user) {
+        <div class="dropdown ms-lg-2" dropdown>
+          <a class="nav-link text-light dropdown-toggle px-0" role="button" dropdownToggle>
+            <i class="fas fa-user-circle" aria-hidden="true"></i> {{ user.username }}
+          </a>
+          <div class="dropdown-menu dropdown-menu-end" data-bs-theme="light" *dropdownMenu>
+            <h6 class="dropdown-header">Signed in as {{ user.username }}</h6>
+            <a class="dropdown-item" routerLink="/member" routerLinkActive="active fw-semibold" (click)="closeMenu()">Community</a>
+            <a class="dropdown-item" routerLink="/my/invoices" routerLinkActive="active fw-semibold" (click)="closeMenu()">My invoices</a>
+            <a class="dropdown-item" routerLink="/traffic" routerLinkActive="active fw-semibold" (click)="closeMenu()">Traffic</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" role="button" (click)="logout()">Logout</a>
+          </div>
         </div>
-      </div>
-
-      <form *ngIf="!(accountService.currentUser$ | async)" #loginForm="ngForm" class="d-flex ms-auto"
-        (ngSubmit)="login()" autocomplete="off">
-        <input name="username" [(ngModel)]="model.username" class="form-control me-2" type="text" placeholder="Username"
-          required>
-        <input name="password" [(ngModel)]="model.password" class="form-control me-2" type="password"
-          placeholder="Password" required>
-        <button class="btn btn-success" type="submit">Login</button>
-      </form>
+      } @else {
+        <form #loginForm="ngForm" class="d-flex ms-auto" (ngSubmit)="login()" autocomplete="off">
+          <input id="navUsername" name="username" [(ngModel)]="model.username" class="form-control me-2" type="text"
+            placeholder="Username" aria-label="Username" required>
+          <input name="password" [(ngModel)]="model.password" class="form-control me-2" type="password"
+            placeholder="Password" aria-label="Password" required>
+          <button class="btn btn-success" type="submit">Login</button>
+        </form>
+      }
     </div>
   </div>
 </nav>

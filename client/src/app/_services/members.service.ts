@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, of, switchMap } from 'rxjs';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { environment } from 'src/environments/environment.development';
+import { HttpClient } from '@angular/common/http';
+import { environment } from 'src/environments/environment';
 import { Member } from '../_models/member';
 
 @Injectable({
@@ -19,24 +19,16 @@ export class MembersService {
   }
 
   getMember(username: string) {
-    return this.http.get<Member>(this.baseUrl + 'users/' + username);
+    return this.http.get<Member>(`${this.baseUrl}users/${encodeURIComponent(username)}`);
   }
 
   setCurrentUser(user: Member) {
-    console.log('Setting current user:', user);
     localStorage.setItem('userId', user.id.toString());
     this.currentUserSource.next(user);
   }
 
   getMemberByUsername(username: string) {
-    const token = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')!).token : '';
-    const httpOptions = {
-      headers: new HttpHeaders({
-        Authorization: `Bearer ${token}`
-      })
-    };
-
-    return this.http.get<Member>(`${this.baseUrl}users/${username}`, httpOptions).pipe(
+    return this.http.get<Member>(`${this.baseUrl}users/${encodeURIComponent(username)}`).pipe(
       switchMap(user => {
         this.setCurrentUser(user);
         return of(user);

@@ -1,108 +1,154 @@
-import { Component } from '@angular/core';
-import { PaymentService } from '../_services/payment.service';
-import { Payment } from '../_models/payment.model';
-import { ToastrService } from 'ngx-toastr';
-import { EMPTY, catchError, map, tap } from 'rxjs';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
+import { Subject, takeUntil } from 'rxjs';
+import { AccountService } from '../_services/account.service';
+import { InvoiceService } from '../_services/invoice.service';
+import { getErrorMessages } from '../_helpers/api-error';
+import { InvoiceLookup, InvoicePaymentResult } from '../_models/invoice.model';
 
+export const TOO_MANY_ATTEMPTS = 'Too many attempts. Please wait a minute and try again.';
+
+/** Invoice numbers look like INV-2026-000123. */
+const INVOICE_NUMBER_PATTERN = /^INV-\d{4}-\d{6}$/;
+/** Payment codes are 8 characters from a set that leaves out 0, 1, I and O. */
+const PAYMENT_CODE_PATTERN = /^[A-HJ-NP-Z2-9]{8}$/;
+
+/** A receipt shown after a successful payment. */
+export interface PaymentReceipt extends InvoicePaymentResult {
+  invoiceNumber: string;
+  description: string;
+  amount: number;
+}
+
+/** Public bill payment: lookup, details, pay, then a printable receipt. No account needed. */
 @Component({
-  selector: 'app-pay',
-  templateUrl: './pay.component.html',
-  styleUrls: ['./pay.component.css']
+    selector: 'app-pay',
+    templateUrl: './pay.component.html',
+    styleUrls: ['./pay.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
+    standalone: false
 })
-export class PayComponent {
-  payment: Payment = this.initializePayment();
-  paymentStatus: string = '';
-  invoiceChecked: boolean = false;
-  errorMessage: string = '';
-  loading: boolean = false;
+export class PayComponent implements OnInit, OnDestroy {
+  invoiceNumber = '';
+  paymentCode = '';
 
-  constructor(private paymentService: PaymentService, private toastr: ToastrService) { }
+  /** The invoice found by the last successful lookup. */
+  invoice: InvoiceLookup | null = null;
+  /** The normalised values that were looked up. Paying uses these, not the form fields. */
+  private checked: { invoiceNumber: string; paymentCode: string } | null = null;
+  receipt: PaymentReceipt | null = null;
 
-  initializePayment(): Payment {
-    return {
-      userId: '',
-      invoiceNumber: '',
-      amount: 0,
-      currency: 'EUR',
-      description: '',
-      isPaid: false
-    };
+  lookupError = '';
+  payError = '';
+  looking = false;
+  paying = false;
+  loggedIn = false;
+
+  private readonly destroy$ = new Subject<void>();
+
+  constructor(private invoiceService: InvoiceService, private accountService: AccountService) {}
+
+  ngOnInit(): void {
+    this.accountService.currentUser$.pipe(takeUntil(this.destroy$)).subscribe(user => this.loggedIn = !!user);
   }
 
-  checkInvoice() {
-    console.log('checkInvoice called');
-    if (!this.payment.invoiceNumber) {
-      this.toastr.error('Please enter an invoice number');
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  lookup(): void {
+    if (this.looking) return;
+
+    const invoiceNumber = this.invoiceNumber.trim().toUpperCase();
+    const paymentCode = normaliseCode(this.paymentCode);
+
+    const problem = this.inputProblem(invoiceNumber, paymentCode);
+    if (problem) {
+      this.lookupError = problem;
       return;
     }
 
-    this.loading = true;
-    this.paymentService.checkInvoice(this.payment.invoiceNumber).pipe(
-      map((response: any) => {
-        if (response.isPaid) {
-          throw new Error('Invoice already paid');
-        }
-        return response;
-      }),
-      tap((response) => {
-        console.log('response:', response);
-        this.invoiceChecked = true;
-        this.paymentStatus = `Invoice amount: ${response.amount} ${response.currency}`;
-        this.payment.amount = response.amount;
-        this.payment.currency = response.currency;
-        this.payment.userId = response.userId;
-        this.errorMessage = '';
-        this.loading = false;
-      }),
-      catchError((error) => {
-        console.log('error:', error);
-        this.handleError(error);
-        return EMPTY;
-      })
-    ).subscribe();
+    this.looking = true;
+    this.lookupError = '';
+    this.payError = '';
+    this.invoiceService.lookup(invoiceNumber, paymentCode).pipe(takeUntil(this.destroy$)).subscribe({
+      next: invoice => {
+        this.invoice = invoice;
+        this.checked = { invoiceNumber, paymentCode };
+        this.receipt = null;
+        this.looking = false;
+      },
+      error: error => {
+        this.invoice = null;
+        this.checked = null;
+        this.lookupError = this.messageFor(error);
+        this.looking = false;
+      }
+    });
   }
 
-  processPayment() {
-    if (!this.invoiceChecked) {
-      this.toastr.error('Please check the invoice before paying.');
-      return;
+  pay(): void {
+    const invoice = this.invoice;
+    const checked = this.checked;
+    if (!invoice || !checked || this.paying || invoice.isPaid) return;
+
+    this.paying = true;
+    this.payError = '';
+    this.invoiceService.payPublic(checked.invoiceNumber, checked.paymentCode).pipe(takeUntil(this.destroy$)).subscribe({
+      next: result => {
+        this.receipt = {
+          ...result,
+          invoiceNumber: checked.invoiceNumber,
+          description: invoice.description,
+          amount: invoice.amount
+        };
+        this.invoice = { ...invoice, isPaid: true, paidAt: result.paidAt };
+        this.paying = false;
+      },
+      error: error => {
+        this.payError = this.messageFor(error);
+        this.paying = false;
+      }
+    });
+  }
+
+  /** Clears the form and the result so another invoice can be paid. */
+  startAgain(): void {
+    this.invoiceNumber = '';
+    this.paymentCode = '';
+    this.invoice = null;
+    this.checked = null;
+    this.receipt = null;
+    this.lookupError = '';
+    this.payError = '';
+  }
+
+  print(): void {
+    window.print();
+  }
+
+  /** Field-level check before any request, so a typo never reaches the rate-limited endpoint. */
+  private inputProblem(invoiceNumber: string, paymentCode: string): string {
+    if (!INVOICE_NUMBER_PATTERN.test(invoiceNumber)) {
+      return 'Enter the invoice number as printed on your bill, for example INV-2026-000123.';
     }
-
-    this.loading = true;
-    this.paymentService.processPayment(this.payment).pipe(
-      tap((response) => {
-        this.toastr.success('Payment processed successfully!');
-        this.invoiceChecked = false;
-        this.payment = this.initializePayment();
-        this.errorMessage = '';
-        this.loading = false;
-      }),
-      catchError((error) => {
-        this.handleError(error);
-        return EMPTY;
-      })
-    ).subscribe();
-  }
-
-  handleError(error: any) {
-    console.log('handleError called with:', error);
-    this.loading = false;
-    if (error.status === 404) {
-      this.toastr.error('Invoice not found.');
-      this.errorMessage = 'Invoice not found.';
-    } else if (error.message === 'Invoice already paid') {
-      this.toastr.error('This invoice is already paid.');
-      this.errorMessage = 'This invoice is already paid.';
-    } else {
-      this.toastr.error(error.message || 'Error checking invoice');
-      this.errorMessage = error.message || 'Error checking invoice';
+    if (!PAYMENT_CODE_PATTERN.test(paymentCode)) {
+      return 'Enter the 8-character payment code from your bill (letters and numbers; the code never uses I, O, 0 or 1).';
     }
-
-    this.invoiceChecked = false;
-    this.paymentStatus = '';
+    return '';
   }
 
-  closeAlert() {
-    this.errorMessage = '';
+  /** Inline message for a failed call. A 429 has an empty body, so it gets its own text. */
+  private messageFor(error: unknown): string {
+    if (error instanceof HttpErrorResponse && error.status === 429) {
+      return TOO_MANY_ATTEMPTS;
+    }
+    return getErrorMessages(error)[0];
   }
+}
+
+/** Removes spaces and dashes a payer may type into the code, and upper-cases it. */
+function normaliseCode(value: string): string {
+  return value.replace(/[\s-]/g, '').toUpperCase();
 }

@@ -482,5 +482,11 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
-API/appsettings.json
 .editorconfig
+
+# Local databases and TLS material (never commit)
+*.db
+*.db-shm
+*.db-wal
+client/ssl/*.pem
+appsettings.Local.json

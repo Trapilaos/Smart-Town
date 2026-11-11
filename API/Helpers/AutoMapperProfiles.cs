@@ -10,12 +10,13 @@ namespace API.Helpers
         public AutoMapperProfiles()
         {
             CreateMap<AppUser, MemberDTO>()
-                .ForMember(dest => dest.PhotoUrl, opt => opt.MapFrom(src => src.Photos.FirstOrDefault(x => x.IsMain).Url))
+                // Null-safe: users without photos map to a null PhotoUrl instead of throwing.
+                .ForMember(dest => dest.PhotoUrl, opt => opt.MapFrom(src =>
+                    src.Photos == null ? null : src.Photos.Where(x => x.IsMain).Select(x => x.Url).FirstOrDefault()))
                 .ForMember(dest => dest.Age, opt => opt.MapFrom(src => src.DateofBirth.CalculateAge()));
             CreateMap<Photo, PhotoDTO>();
 
             CreateMap<RegisterDTO, AppUser>();
         }
-    
     }
 }

@@ -1,30 +1,25 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { environment } from '../../environments/environment';
-import { catchError, Observable, throwError } from 'rxjs';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { Observable } from 'rxjs';
+import { LightingNow, LightingScheduleDay } from '../_models/lighting.model';
+import { environment } from 'src/environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class LightingService {
-  private apiUrl = `${environment.apiUrl}lighting/status`;
+  private apiUrl = `${environment.apiUrl}lighting`;
 
-  constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient) {}
 
-  getLightingStatus(town: string): Observable<any> {
-    return this.http.get<any>(`${this.apiUrl}?town=${town}`).pipe(
-      catchError(this.handleError)
-    );
+  /** Nightly schedule for the next `days` days (1 to 31). */
+  getSchedule(days = 7): Observable<LightingScheduleDay[]> {
+    const params = new HttpParams().set('days', days);
+    return this.http.get<LightingScheduleDay[]>(`${this.apiUrl}/schedule`, { params });
   }
 
-  private handleError(error: HttpErrorResponse): Observable<never> {
-    let errorMessage = 'Unknown error!';
-    if (error.error instanceof ErrorEvent) {
-      errorMessage = `Client-side error: ${error.error.message}`;
-    } else {
-      errorMessage = `Server-side error: ${error.status} ${error.message}`;
-    }
-    console.error(errorMessage);
-    return throwError(() => new Error('There was a problem retrieving lighting status; please try again later.'));
+  /** Current lighting status and the next change. */
+  getNow(): Observable<LightingNow> {
+    return this.http.get<LightingNow>(`${this.apiUrl}/now`);
   }
 }

@@ -1,1 +1,115 @@
-/* You can add global styles to this file, and also import other style files */
+/* Global styles. Shared page, state and card classes are used by every page. */
+
+body {
+    background-color: #f5f7fa;
+}
+
+.container-fluid {
+    padding: 0 1rem;
+}
+
+.btn:hover {
+    transform: scale(1.05);
+    transition: transform 0.3s ease-in-out;
+}
+
+/* Page layout */
+.page {
+    padding-block: 1.5rem 3rem;
+}
+
+.page-header {
+    margin-bottom: 1.5rem;
+}
+
+.page-title {
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: var(--bs-primary);
+    margin-bottom: 0.25rem;
+}
+
+.page-subtitle {
+    color: var(--bs-secondary-color, #6c757d);
+    margin-bottom: 0;
+}
+
+/* States */
+.empty-state {
+    text-align: center;
+    color: var(--bs-secondary-color, #6c757d);
+    padding: 2rem 1rem;
+}
+
+.empty-state > .fas,
+.empty-state > .far,
+.empty-state > i {
+    display: block;
+    font-size: 2rem;
+    margin-bottom: 0.75rem;
+}
+
+.loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    text-align: center;
+    padding: 2rem 1rem;
+    color: var(--bs-secondary-color, #6c757d);
+}
+
+/* Cards */
+.card-elevated {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    background-color: var(--bs-card-bg, #fff);
+    border: 0;
+    border-radius: var(--bs-card-border-radius, 0.375rem);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* Flatly's $dark is grey, so text-dark and text-bg-warning don't give dark text on warning. */
+.text-on-warning {
+    color: #212529 !important;
+}
+
+/* Map markers: Leaflet divIcons are built outside any component template, so they are styled here. */
+.app-map-marker {
+    background: none;
+    border: 0;
+}
+
+.app-map-marker__dot {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+    color: #fff;
+    font-size: 13px;
+    transition: transform 0.15s ease-in-out;
+}
+
+.app-map-marker--selected .app-map-marker__dot {
+    transform: scale(1.25);
+    box-shadow: 0 0 0 3px #0d6efd;
+}
+
+/* Print: the route page prints its stop list and map without the chrome. */
+@media print {
+    .navbar,
+    .app-footer,
+    .no-print {
+        display: none !important;
+    }
+
+    .page {
+        padding: 0;
+    }
+}

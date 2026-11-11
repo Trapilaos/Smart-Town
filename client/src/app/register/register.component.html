@@ -1,16 +1,59 @@
-<form #registerForm="ngForm" (ngSubmit)="register()" autocomplete="off" class="text-center">
+<form #registerForm="ngForm" (ngSubmit)="!isSubmitting && registerForm.valid && !passwordsMismatch && register()" autocomplete="off" class="text-center">
     <h2 class="register-heading text-primary">Sign Up</h2>
     <hr>
     <div class="mb-3">
         <input type="text" class="form-control" name="username" [(ngModel)]="model.username" placeholder="Username"
-            required>
+            #username="ngModel" required minlength="3"
+            [class.is-invalid]="username.touched && username.invalid">
+        <div class="invalid-feedback text-start">
+            @if (username.hasError('required')) {
+                Username is required.
+            } @else {
+                Username must be at least 3 characters.
+            }
+        </div>
     </div>
     <div class="mb-3">
         <input type="password" class="form-control" name="password" [(ngModel)]="model.password" placeholder="Password"
-            required>
+            #password="ngModel" required minlength="6" maxlength="100"
+            [class.is-invalid]="password.touched && password.invalid">
+        <div class="invalid-feedback text-start">
+            @if (password.hasError('required')) {
+                Password is required.
+            } @else if (password.hasError('minlength')) {
+                Password must be at least 6 characters.
+            } @else {
+                Password must be 100 characters or fewer.
+            }
+        </div>
+        <small class="form-text text-muted d-block text-start">At least 6 characters, with an uppercase letter, a lowercase letter and a number.</small>
     </div>
+    <div class="mb-3">
+        <input type="password" class="form-control" name="confirmPassword" [(ngModel)]="confirmPassword" placeholder="Confirm password"
+            #confirm="ngModel" required
+            [class.is-invalid]="confirm.touched && (confirm.invalid || passwordsMismatch)">
+        <div class="invalid-feedback text-start">
+            @if (confirm.hasError('required')) {
+                Please confirm your password.
+            } @else {
+                Passwords do not match.
+            }
+        </div>
+    </div>
+    @if (serverErrors.length > 0) {
+        <div class="alert alert-danger text-start" role="alert">
+            <ul class="mb-0 ps-3">
+                @for (message of serverErrors; track message) {
+                    <li>{{ message }}</li>
+                }
+            </ul>
+        </div>
+    }
     <div>
-        <button class="btn btn-success me-2" type="submit">Register</button>
+        <button class="btn btn-success me-2" type="submit"
+            [disabled]="registerForm.invalid || passwordsMismatch || isSubmitting">
+            {{ isSubmitting ? 'Registering…' : 'Register' }}
+        </button>
         <button class="btn btn-default" type="button" (click)="cancel()">Cancel</button>
     </div>
 </form>

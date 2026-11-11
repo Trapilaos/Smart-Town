@@ -1,61 +1,158 @@
-<div class="container mt-5">
-  <h2 class="text-center mb-4">Admin Dashboard</h2>
-
-  <div class="row justify-content-center">
-    <div class="col-md-6 mb-4">
-      <div class="card text-center">
-        <div class="card-body">
-          <i class="fas fa-calendar-plus fa-3x mb-3 text-primary"></i>
-          <h5 class="card-title">Create Event</h5>
-          <p class="card-text">Create a new event for the community.</p>
-          <a routerLink="/admin/create-event" class="btn btn-primary">Go to Create Event</a>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-6 mb-4">
-      <div class="card text-center">
-        <div class="card-body">
-          <i class="fas fa-users-cog fa-3x mb-3 text-secondary"></i>
-          <h5 class="card-title">Manage Users</h5>
-          <p class="card-text">Manage user roles and permissions.</p>
-          <a routerLink="/admin/user-management" class="btn btn-secondary">Go to User Management</a>
-        </div>
-      </div>
-    </div>
+<div class="page container">
+  <div class="page-header">
+    <h1 class="page-title">Admin dashboard</h1>
+    <p class="page-subtitle">Today at a glance: bins, parking, invoices and events.</p>
   </div>
 
-  <div class="row mt-5">
-    <div class="col-12">
-      <h3 class="text-center mb-4">Manage Events</h3>
-      <div class="event-list">
-        <div class="event-card card mb-4" *ngFor="let event of events">
+  <section class="mb-5" aria-labelledby="kpi-heading">
+    <h2 id="kpi-heading" class="visually-hidden">Key figures</h2>
+    <div class="row row-cols-2 row-cols-lg-5 g-3">
+      <div class="col">
+        <a class="card card-elevated h-100 text-decoration-none text-reset" routerLink="/admin/bins">
           <div class="card-body">
-            <h5 class="event-title card-title">{{ event.title }}</h5>
-            <img class="event-photo card-img-top mb-3" [src]="event.photoUrl" alt="{{ event.title }}">
-            <p class="event-description card-text">{{ event.description }}</p>
-            <button class="event-button btn btn-danger" (click)="deleteEvent(event.id)">
-              <i class="fas fa-trash"></i> Delete
-            </button>
+            <div class="small text-body-secondary">Bins at {{ highFillPercent }}% or more</div>
+            <div class="kpi-value">{{ binsHigh.loading ? '…' : binsHigh.failed ? '—' : binsHigh.value }}</div>
           </div>
-        </div>
+        </a>
+      </div>
+      <div class="col">
+        <a class="card card-elevated h-100 text-decoration-none text-reset" routerLink="/admin/parking">
+          <div class="card-body">
+            <div class="small text-body-secondary">Free parking now</div>
+            <div class="kpi-value">{{ freeParking.loading ? '…' : freeParking.failed ? '—' : freeParking.value }}</div>
+          </div>
+        </a>
+      </div>
+      <div class="col">
+        <a class="card card-elevated h-100 text-decoration-none text-reset" routerLink="/admin/invoices">
+          <div class="card-body">
+            <div class="small text-body-secondary">Unpaid total</div>
+            <div class="kpi-value">
+              @if (unpaidTotal.loading) { … } @else if (unpaidTotal.failed) { — } @else {
+                {{ unpaidTotalAmount | currency:'EUR':'symbol':'1.0-0' }}
+              }
+            </div>
+          </div>
+        </a>
+      </div>
+      <div class="col">
+        <a class="card card-elevated h-100 text-decoration-none text-reset" routerLink="/admin/invoices">
+          <div class="card-body">
+            <div class="small text-body-secondary">Overdue invoices</div>
+            <div class="kpi-value">{{ overdueInvoices.loading ? '…' : overdueInvoices.failed ? '—' : overdueInvoices.value }}</div>
+          </div>
+        </a>
+      </div>
+      <div class="col">
+        <a class="card card-elevated h-100 text-decoration-none text-reset" routerLink="/admin/events">
+          <div class="card-body">
+            <div class="small text-body-secondary">Upcoming events</div>
+            <div class="kpi-value">{{ upcomingEvents.loading ? '…' : upcomingEvents.failed ? '—' : upcomingEvents.value }}</div>
+            @if (!upcomingEvents.loading && !upcomingEvents.failed && upcomingDrafts > 0) {
+              <div class="small text-body-secondary">+{{ upcomingDrafts }} drafts</div>
+            }
+          </div>
+        </a>
       </div>
     </div>
-  </div>
+  </section>
 
-  <div class="row mt-5">
-    <div class="col-12">
-      <h3 class="text-center mb-4">Manage Comments</h3>
-      <div class="comment-list">
-        <div class="comment-card card mb-4" *ngFor="let comment of comments">
-          <div class="card-body">
-            <p class="comment-content card-text">{{ comment.content }}</p>
-            <small class="comment-date">{{ comment.date | date }}</small>
-            <button class="comment-button btn btn-warning" (click)="markCommentAsSeen(comment.id)">
-              <i class="fas fa-check"></i> Mark as Done
-            </button>
-          </div>
-        </div>
-      </div>
+  <section class="mb-5" aria-labelledby="links-heading">
+    <h2 id="links-heading" class="h4 mb-3">Quick links</h2>
+    <div class="d-flex flex-wrap gap-2">
+      <a routerLink="/admin/events/new" class="btn btn-primary"><i class="fas fa-calendar-plus me-1" aria-hidden="true"></i>Create event</a>
+      <a routerLink="/admin/events" class="btn btn-outline-primary">Events</a>
+      <a routerLink="/admin/bins" class="btn btn-outline-primary">Waste bins</a>
+      <a routerLink="/admin/route" class="btn btn-outline-primary">Collection route</a>
+      <a routerLink="/admin/parking" class="btn btn-outline-primary">Parking</a>
+      <a routerLink="/admin/invoices/new" class="btn btn-outline-primary">New invoice</a>
+      <a routerLink="/admin/invoices" class="btn btn-outline-primary">Invoices</a>
+      <a routerLink="/admin/municipality" class="btn btn-outline-primary">Municipality</a>
+      <a routerLink="/admin/users" class="btn btn-outline-primary"><i class="fas fa-users-cog me-1" aria-hidden="true"></i>Users</a>
+      <a routerLink="/admin/audit" class="btn btn-outline-primary">Audit log</a>
     </div>
+  </section>
+
+  <div class="row g-4 mb-5">
+    <section class="col-lg-6" aria-labelledby="audit-heading">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 id="audit-heading" class="h4 mb-0">Recent activity</h2>
+        <a routerLink="/admin/audit" class="small">View full audit log</a>
+      </div>
+
+      @if (auditLoading) {
+        <div class="loading-state">
+          <div class="spinner-border text-primary" role="status"></div>
+          <p class="mt-2 mb-0">Loading…</p>
+        </div>
+      } @else if (auditError) {
+        <div class="alert alert-warning" role="alert">Activity could not be loaded. {{ auditError }}</div>
+      } @else if (recentAudit.length === 0) {
+        <div class="empty-state">
+          <i class="fas fa-clipboard-list"></i>
+          <p>No admin activity yet.</p>
+        </div>
+      } @else {
+        <div class="table-responsive card-elevated">
+          <table class="table table-sm align-middle mb-0">
+            <caption class="visually-hidden">The last {{ recentAuditCount }} audit entries</caption>
+            <thead>
+              <tr>
+                <th scope="col">When</th>
+                <th scope="col">Who</th>
+                <th scope="col">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (entry of recentAudit; track entry.id) {
+                <tr>
+                  <td class="small text-nowrap">{{ entry.atUtc | date:'short' }}</td>
+                  <td class="small">{{ entry.username || 'System' }}</td>
+                  <td class="small">{{ entry.action }} {{ entry.entityType }}@if (entry.entityId) { #{{ entry.entityId }} }</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+
+    <section class="col-lg-6" aria-labelledby="comments-heading">
+      <h2 id="comments-heading" class="h4 mb-3">Comments to review</h2>
+
+      @if (commentsLoading) {
+        <div class="loading-state">
+          <div class="spinner-border text-primary" role="status"></div>
+          <p class="mt-2 mb-0">Loading…</p>
+        </div>
+      } @else if (commentsError) {
+        <div class="alert alert-warning" role="alert">Comments could not be loaded. {{ commentsError }}</div>
+      } @else if (comments.length === 0) {
+        <div class="empty-state">
+          <i class="fas fa-check-circle"></i>
+          <p>No comments waiting for review.</p>
+        </div>
+      } @else {
+        <div class="d-flex flex-column gap-3">
+          @for (comment of comments; track comment.id) {
+            <div class="card-elevated card">
+              <div class="card-body">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2 small text-body-secondary">
+                  <span><i class="fas fa-user me-1"></i>{{ comment.username || 'Unknown user' }}</span>
+                  <span><i class="far fa-clock me-1"></i>{{ comment.date | date: 'medium' }}</span>
+                </div>
+                <p class="mb-3 comment-text">{{ comment.content }}</p>
+                <button class="btn btn-sm btn-outline-success" type="button"
+                        [disabled]="seeingCommentId === comment.id"
+                        (click)="markCommentAsSeen(comment.id)">
+                  <i class="fas fa-check me-1"></i>
+                  {{ seeingCommentId === comment.id ? 'Saving…' : 'Mark as seen' }}
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </section>
   </div>
 </div>
