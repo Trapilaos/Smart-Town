@@ -1,78 +1,160 @@
-<div class="container mt-4">
-  <h2 class="text-center mb-4">Traffic Management</h2>
+<div class="page">
+  <header class="page-header">
+    <h1 class="page-title">Traffic &amp; Parking</h1>
+    <p class="page-subtitle">Check road traffic and reserve a parking space.</p>
+  </header>
 
-  @if (loading) {
-    <div class="d-flex justify-content-center align-items-center vh-100">
-      <div class="spinner-border text-primary" role="status">
-        <span class="visually-hidden">Loading...</span>
-      </div>
-    </div>
-  } @else {
-    @if (errorMessage) {
-      <div class="alert alert-danger mb-4">{{ errorMessage }}</div>
-    }
-    <div class="row">
-      <div class="col-md-6">
-        <h4 class="mb-3">Reserve Parking Spaces</h4>
-        @if (activeReservation) {
-          <div class="card mb-3">
-            <div class="card-body">
-              <h5 class="card-title">Active Reservation</h5>
-              <p class="card-text">
-                <strong>Parking Space ID:</strong> {{ activeReservation.parkingSpaceId }}<br>
-                <strong>Start Time:</strong> {{ activeReservation.reservationTime | date:'shortTime' }}<br>
-                <strong>End Time:</strong> {{ getEndTime(activeReservation) | date:'shortTime' }}
-              </p>
-            </div>
+  <div class="row g-4">
+    <div class="col-lg-7">
+      <section aria-labelledby="parking-heading">
+        <h2 id="parking-heading" class="h4 mb-3"><i class="fas fa-parking text-primary"></i> Parking</h2>
+
+        @if (parkingLoading) {
+          <div class="loading-state">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-2 mb-0">Loading…</p>
           </div>
-        }
-        @for (space of parkingSpaces; track trackByFn($index, space)) {
-          <div class="card reserve-card mb-3">
-            <div class="card-body">
-              <h5 class="card-title">{{ space.name }}</h5>
-              <p class="card-text">{{ space.currentVehicles }}/{{ space.maxVehicles }}</p>
-              <button class="btn btn-primary btn-block" (click)="selectParkingSpace(space)"
-                [disabled]="space.currentVehicles >= space.maxVehicles || hasActiveReservation()">
-                <i class="fas fa-parking"></i> Reserve
-              </button>
-              @if (selectedParkingSpaceId === space.id && reservationMessage) {
-                <div class="invalid-feedback">
-                  {{ reservationMessage }}
-                </div>
-              }
-              @if (selectedParkingSpaceId === space.id) {
-                <div class="mt-2">
-                  <p><strong>Reservation Time:</strong> {{ reservationTime | date:'shortTime' }}</p>
-                  <p><strong>Duration:</strong>
-                  <select class="form-select" [(ngModel)]="reservationDuration">
-                    <option [ngValue]="null">Select Duration</option>
-                    <option [ngValue]="30">30 minutes</option>
-                    <option [ngValue]="60">1 hour</option>
-                    <option [ngValue]="120">2 hours</option>
-                    <option [ngValue]="240">4 hours</option>
-                    <option [ngValue]="1440">1 day</option>
-                  </select>
-                </p>
-                <button class="btn btn-success mt-2" (click)="confirmReservation()">Confirm Reservation</button>
-                <button class="btn btn-danger mt-2" (click)="cancelReservation()">Cancel</button>
+        } @else if (parkingError) {
+          <div class="alert alert-danger" role="alert">{{ parkingError }}</div>
+        } @else if (parkingSpaces.length === 0) {
+          <div class="empty-state">
+            <i class="fas fa-parking"></i>
+            <p>No parking spaces are set up yet.</p>
+          </div>
+        } @else {
+          <div class="row row-cols-1 row-cols-md-2 g-3">
+            @for (space of parkingSpaces; track space.id) {
+              <div class="col">
+                <article class="card card-elevated h-100">
+                  <div class="card-body d-flex flex-column">
+                    <div class="d-flex justify-content-between align-items-baseline gap-2 mb-2">
+                      <h3 class="h6 mb-0">{{ space.name }}</h3>
+                      <span class="small text-muted">{{ space.currentVehicles }}/{{ space.maxVehicles }} vehicles</span>
+                    </div>
+                    <div class="progress" role="progressbar"
+                      [attr.aria-label]="space.name + ' occupancy'"
+                      [attr.aria-valuenow]="occupancyPercent(space)" aria-valuemin="0" aria-valuemax="100">
+                      <div class="progress-bar" [ngClass]="occupancyClass(space)"
+                        [style.width.%]="occupancyPercent(space)"></div>
+                    </div>
+                    <p class="small text-muted mt-1 mb-3">{{ occupancyPercent(space) }}% occupied</p>
+
+                    @if (isFull(space)) {
+                      <button type="button" class="btn btn-outline-secondary w-100 mt-auto" disabled>Full</button>
+                    } @else {
+                      <button type="button" class="btn btn-primary w-100 mt-auto"
+                        [disabled]="hasActiveReservation()"
+                        (click)="selectParkingSpace(space)">
+                        <i class="fas fa-parking"></i> Reserve
+                      </button>
+                    }
+
+                    @if (isSelected(space)) {
+                      <form class="reserve-form mt-3 pt-3" novalidate (ngSubmit)="confirmReservation()">
+                        <p class="small mb-2">
+                          <i class="fas fa-clock"></i> Starts at {{ reservationTime | date:'shortTime' }}
+                        </p>
+                        <div class="d-flex flex-wrap gap-2 mb-3">
+                          @for (preset of durationPresets; track preset.minutes) {
+                            <button type="button" class="btn btn-sm"
+                              [ngClass]="reservationDuration === preset.minutes ? 'btn-primary' : 'btn-outline-primary'"
+                              (click)="reservationDuration = preset.minutes">
+                              {{ preset.label }}
+                            </button>
+                          }
+                        </div>
+                        <label class="form-label" [attr.for]="'duration-' + space.id">
+                          Duration in minutes ({{ minDuration }}–{{ maxDuration }})
+                        </label>
+                        <input type="number" class="form-control" name="duration"
+                          [id]="'duration-' + space.id"
+                          [attr.min]="minDuration" [attr.max]="maxDuration" step="1"
+                          [class.is-invalid]="durationInvalid"
+                          [attr.aria-invalid]="durationInvalid"
+                          [(ngModel)]="reservationDuration">
+                        @if (durationInvalid) {
+                          <div class="invalid-feedback">Enter a whole number of minutes between {{ minDuration }} and {{ maxDuration }}.</div>
+                        }
+                        <div class="d-flex gap-2 mt-3">
+                          <button type="submit" class="btn btn-success" [disabled]="!isDurationValid() || reserving">
+                            @if (reserving) {
+                              <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                              Reserving…
+                            } @else {
+                              Confirm reservation
+                            }
+                          </button>
+                          <button type="button" class="btn btn-outline-secondary" (click)="cancelReservation()">Cancel</button>
+                        </div>
+                      </form>
+                    }
+                  </div>
+                </article>
               </div>
             }
           </div>
-        </div>
-      }
+        }
+      </section>
     </div>
-    <div class="col-md-6">
-      <h4 class="mb-3">Traffic Data</h4>
-      <div class="traffic-map">
-        @for (data of trafficData; track data) {
-          <div [ngClass]="getTrafficClass(data.trafficFlow)" class="traffic-location"
-            data-toggle="tooltip" data-placement="top" title="{{ data.location }}">
-            <i class="fas fa-road"></i> {{ data.location }} - {{ data.trafficFlow }}%
+
+    <div class="col-lg-5">
+      <section class="mb-4" aria-labelledby="reservation-heading">
+        <h2 id="reservation-heading" class="h4 mb-3"><i class="fas fa-ticket-alt text-primary"></i> Your reservation</h2>
+
+        @if (activeReservation) {
+          <div class="card card-elevated">
+            <div class="card-body">
+              <h3 class="h6 mb-2">{{ spaceName(activeReservation.parkingSpaceId) }}</h3>
+              <p class="mb-0">
+                <i class="fas fa-clock"></i>
+                {{ activeReservation.reservationTime | date:'shortTime' }} to {{ getEndTime(activeReservation) | date:'shortTime' }}
+              </p>
+            </div>
+          </div>
+        } @else {
+          <div class="empty-state">
+            <i class="fas fa-ticket-alt"></i>
+            <p>No active reservation</p>
           </div>
         }
-      </div>
+      </section>
+
+      <section aria-labelledby="traffic-heading">
+        <h2 id="traffic-heading" class="h4 mb-3"><i class="fas fa-road text-primary"></i> Traffic</h2>
+
+        @if (trafficLoading) {
+          <div class="loading-state">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-2 mb-0">Loading…</p>
+          </div>
+        } @else if (trafficError) {
+          <div class="alert alert-danger" role="alert">{{ trafficError }}</div>
+        } @else if (trafficData.length === 0) {
+          <div class="empty-state">
+            <i class="fas fa-road"></i>
+            <p>No traffic data is available right now.</p>
+          </div>
+        } @else {
+          <div class="vstack gap-3">
+            @for (data of trafficData; track data.id) {
+              <div class="card card-elevated">
+                <div class="card-body">
+                  <div class="d-flex justify-content-between align-items-baseline gap-2 mb-2">
+                    <h3 class="h6 mb-0">{{ data.location }}</h3>
+                    <span class="badge" [ngClass]="flowClass(data)">{{ flowPercent(data) }}%</span>
+                  </div>
+                  <div class="progress" role="progressbar"
+                    [attr.aria-label]="data.location + ' traffic flow'"
+                    [attr.aria-valuenow]="flowPercent(data)" aria-valuemin="0" aria-valuemax="100">
+                    <div class="progress-bar" [ngClass]="flowClass(data)" [style.width.%]="flowPercent(data)"></div>
+                  </div>
+                  <small class="text-muted">Updated {{ data.timestamp | date:'shortTime' }}</small>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </section>
     </div>
   </div>
-}
-
 </div>
