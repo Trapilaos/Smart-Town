@@ -9,20 +9,25 @@ import { AccountService } from '../_services/account.service';
 import { User } from '../_models/user';
 import { JwtInterceptor } from './jwt.interceptor';
 import { ErrorInterceptor } from './error.interceptor';
+import { makeJwt } from '../_helpers/jwt.testing';
+
+const nowSeconds = () => Math.floor(Date.now() / 1000);
 
 describe('JwtInterceptor', () => {
   let currentUser: BehaviorSubject<User | null>;
+  let logout: jasmine.Spy;
   let http: HttpClient;
   let controller: HttpTestingController;
 
   beforeEach(() => {
     currentUser = new BehaviorSubject<User | null>(null);
+    logout = jasmine.createSpy('logout');
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(withInterceptorsFromDi()),
         provideHttpClientTesting(),
         { provide: HTTP_INTERCEPTORS, useClass: JwtInterceptor, multi: true },
-        { provide: AccountService, useValue: { currentUser$: currentUser.asObservable() } }
+        { provide: AccountService, useValue: { currentUser$: currentUser.asObservable(), logout } }
       ]
     });
     http = TestBed.inject(HttpClient);
@@ -32,12 +37,14 @@ describe('JwtInterceptor', () => {
   afterEach(() => controller.verify());
 
   it('adds the Bearer token when a user is signed in', () => {
-    currentUser.next({ userId: 1, username: 'lisa', token: 'abc.def.ghi', roles: ['Member'] });
+    const token = makeJwt({ unique_name: 'lisa', role: 'Member', exp: nowSeconds() + 3600 });
+    currentUser.next({ userId: 1, username: 'lisa', token, roles: ['Member'] });
 
     http.get('/api/anything').subscribe();
 
     const req = controller.expectOne('/api/anything');
-    expect(req.request.headers.get('Authorization')).toBe('Bearer abc.def.ghi');
+    expect(req.request.headers.get('Authorization')).toBe(`Bearer ${token}`);
+    expect(logout).not.toHaveBeenCalled();
     req.flush({});
   });
 
@@ -48,6 +55,18 @@ describe('JwtInterceptor', () => {
     expect(req.request.headers.has('Authorization')).toBeFalse();
     req.flush({});
   });
+
+  it('logs out and omits the header when the token has expired', () => {
+    const token = makeJwt({ unique_name: 'lisa', role: 'Member', exp: nowSeconds() - 60 });
+    currentUser.next({ userId: 1, username: 'lisa', token, roles: ['Member'] });
+
+    http.get('/api/anything').subscribe();
+
+    const req = controller.expectOne('/api/anything');
+    expect(req.request.headers.has('Authorization')).toBeFalse();
+    expect(logout).toHaveBeenCalledTimes(1);
+    req.flush({});
+  });
 });
 
 describe('ErrorInterceptor', () => {
@@ -55,17 +74,22 @@ describe('ErrorInterceptor', () => {
   let controller: HttpTestingController;
   let toastr: jasmine.SpyObj<ToastrService>;
   let router: jasmine.SpyObj<Router>;
+  let currentUser: BehaviorSubject<User | null>;
+  let logout: jasmine.Spy;
 
   beforeEach(() => {
     toastr = jasmine.createSpyObj('ToastrService', ['error']);
     router = jasmine.createSpyObj('Router', ['navigateByUrl']);
+    currentUser = new BehaviorSubject<User | null>({ userId: 1, username: 'lisa', token: 't', roles: ['Member'] });
+    logout = jasmine.createSpy('logout');
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(withInterceptorsFromDi()),
         provideHttpClientTesting(),
         { provide: HTTP_INTERCEPTORS, useClass: ErrorInterceptor, multi: true },
         { provide: ToastrService, useValue: toastr },
-        { provide: Router, useValue: router }
+        { provide: Router, useValue: router },
+        { provide: AccountService, useValue: { currentUser$: currentUser.asObservable(), logout } }
       ]
     });
     http = TestBed.inject(HttpClient);
@@ -180,5 +204,29 @@ describe('ErrorInterceptor', () => {
 
     expect(toastr.error).not.toHaveBeenCalled();
     expect(error.status).toBe(500);
+  });
+
+  it('logs out, redirects home and explains why on 401 for a request that carried a token', () => {
+    let error: any;
+    http.get('/api/secret', { headers: { Authorization: 'Bearer t' } }).subscribe({ error: e => (error = e) });
+
+    controller.expectOne('/api/secret').flush('nope', { status: 401, statusText: 'Unauthorized' });
+
+    expect(logout).toHaveBeenCalledTimes(1);
+    expect(router.navigateByUrl).toHaveBeenCalledWith('/');
+    expect(toastr.error).toHaveBeenCalledWith('Your session has expired. Please log in again.', 'Session expired');
+    expect(error.status).toBe(401);
+  });
+
+  it('does not log out or redirect on a login 401, which has no Authorization header', () => {
+    let error: any;
+    http.post('/api/account/login', { username: 'lisa', password: 'wrong' }).subscribe({ error: e => (error = e) });
+
+    controller.expectOne('/api/account/login').flush('Invalid username or password', { status: 401, statusText: 'Unauthorized' });
+
+    expect(logout).not.toHaveBeenCalled();
+    expect(router.navigateByUrl).not.toHaveBeenCalled();
+    expect(toastr.error).toHaveBeenCalledWith('Invalid username or password', '401');
+    expect(error.status).toBe(401);
   });
 });

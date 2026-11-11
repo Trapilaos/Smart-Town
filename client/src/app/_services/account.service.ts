@@ -4,6 +4,7 @@ import { User } from '../_models/user';
 import { HttpClient, HttpContext } from '@angular/common/http';
 import { environment } from 'src/environments/environment';
 import { SKIP_ERROR_TOAST } from '../_helpers/api-error';
+import { decodeJwtPayload, isTokenExpired } from '../_helpers/jwt';
 
 @Injectable({
   providedIn: 'root'
@@ -17,12 +18,17 @@ export class AccountService {
     this.restoreUser();
   }
 
-  /** Signs the user back in from local storage, before any route guard runs. */
+  /** Signs the user back in from local storage, before any route guard runs. Expired sessions are dropped. */
   private restoreUser() {
     try {
       const userString = localStorage.getItem('user');
       if (!userString) return;
-      this.setCurrentUser(JSON.parse(userString) as User);
+      const user = JSON.parse(userString) as User;
+      if (!user.token || isTokenExpired(user.token)) {
+        localStorage.removeItem('user');
+        return;
+      }
+      this.setCurrentUser(user);
     } catch {
       localStorage.removeItem('user');
     }
@@ -53,15 +59,21 @@ export class AccountService {
   }
 
   setCurrentUser(user: User) {
-    const decodedToken = this.getDecodedToken(user.token);
-    user.roles = Array.isArray(decodedToken.role) ? decodedToken.role : [decodedToken.role];
+    let decodedToken;
+    try {
+      decodedToken = this.getDecodedToken(user.token);
+    } catch {
+      this.logout();
+      throw new Error('The sign-in token could not be read. Please log in again.');
+    }
+    const role = decodedToken.role;
+    user.roles = Array.isArray(role) ? role : [role].filter((r): r is string => typeof r === 'string');
     localStorage.setItem('user', JSON.stringify(user));
     this.currentUserSource.next(user);
   }
 
   getDecodedToken(token: string) {
-    const parts = token.split('.');
-    return JSON.parse(atob(parts[1]));
+    return decodeJwtPayload(token);
   }
 
   logout() {

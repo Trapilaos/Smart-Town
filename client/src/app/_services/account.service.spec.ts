@@ -7,7 +7,8 @@ import { AccountService } from './account.service';
 /** Builds an unsigned JWT-shaped string; the service only decodes the payload. */
 export function fakeToken(roles: string | string[]): string {
   const encode = (value: object) => btoa(JSON.stringify(value));
-  return `${encode({ alg: 'none' })}.${encode({ nameid: '1', unique_name: 'lisa', role: roles })}.sig`;
+  const exp = Math.floor(Date.now() / 1000) + 3600;
+  return `${encode({ alg: 'none' })}.${encode({ nameid: '1', unique_name: 'lisa', role: roles, exp })}.sig`;
 }
 
 describe('AccountService', () => {
@@ -88,6 +89,28 @@ describe('AccountService', () => {
 
     service.logout();
 
+    expect(await firstValueFrom(service.currentUser$)).toBeNull();
+    expect(localStorage.getItem('user')).toBeNull();
+  });
+
+  it('restore drops an expired user from local storage', async () => {
+    const expired = fakeToken('Member').replace(/\.[^.]*\.sig$/, '.' + btoa(JSON.stringify({ unique_name: 'lisa', role: 'Member', exp: 1 })) + '.sig');
+    localStorage.setItem('user', JSON.stringify({ userId: 1, username: 'lisa', token: expired, roles: [] }));
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting()]
+    });
+    const restored = TestBed.inject(AccountService);
+
+    expect(await firstValueFrom(restored.currentUser$)).toBeNull();
+    expect(localStorage.getItem('user')).toBeNull();
+  });
+
+  it('setCurrentUser logs out and throws a clear error when the token cannot be read', async () => {
+    service.setCurrentUser({ userId: 1, username: 'lisa', token: fakeToken('Member'), roles: [] });
+
+    expect(() => service.setCurrentUser({ userId: 1, username: 'lisa', token: 'not-a-jwt', roles: [] }))
+      .toThrowError('The sign-in token could not be read. Please log in again.');
     expect(await firstValueFrom(service.currentUser$)).toBeNull();
     expect(localStorage.getItem('user')).toBeNull();
   });
