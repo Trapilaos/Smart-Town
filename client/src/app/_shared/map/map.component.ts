@@ -61,26 +61,42 @@ export class MapComponent implements AfterViewInit, OnChanges, OnDestroy {
   private markerLayer = L.layerGroup();
   private markerEntries: { id: number | string; marker: L.Marker }[] = [];
   private viewSub: Subscription | null = null;
+  private resizeObserver: ResizeObserver | null = null;
   private resizeTimer: ReturnType<typeof setTimeout> | null = null;
+  /** True once the container has a non-zero size. The first size triggers a fit. */
+  private sized = false;
+  /** True after the user pans or zooms. Automatic fits stop after that. */
+  private userAdjusted = false;
+  /** True while the component moves the map itself, so those moves are not counted as user moves. */
+  private programmatic = false;
+  private readonly onWindowResize = () => this.handleContainerResize();
 
   constructor(private municipality: MunicipalityService) {}
 
   ngAfterViewInit(): void {
-    const map = L.map(this.containerRef.nativeElement, { zoomControl: true, attributionControl: true });
+    const container = this.containerRef.nativeElement;
+    const map = L.map(container, { zoomControl: true, attributionControl: true });
     L.tileLayer(TILE_URL, { maxZoom: 19, attribution: TILE_ATTRIBUTION }).addTo(map);
     this.boundaryLayer.addTo(map);
     this.routeLayer.addTo(map);
     this.markerLayer.addTo(map);
     map.on('click', (event: L.LeafletMouseEvent) => this.handleMapClick(event));
+    map.on('dragstart zoomstart', () => this.markUserMove());
     this.map = map;
 
     this.drawBoundary();
-    this.fitView();
     this.drawRoute();
     this.drawMarkers();
+    this.fitView();
 
-    // The map may be created inside a card that is still laying out, so measure again after the first paint.
-    this.resizeTimer = setTimeout(() => this.map?.invalidateSize());
+    // The container is laid out after this hook runs (cards, flex and grid settle later), so track its size.
+    if (typeof ResizeObserver !== 'undefined') {
+      this.resizeObserver = new ResizeObserver(() => this.handleContainerResize());
+      this.resizeObserver.observe(container);
+    } else {
+      this.resizeTimer = setTimeout(() => this.handleContainerResize());
+      window.addEventListener('resize', this.onWindowResize);
+    }
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -91,16 +107,47 @@ export class MapComponent implements AfterViewInit, OnChanges, OnDestroy {
       this.fitView();
     }
     if (changes['route']) this.drawRoute();
-    if (changes['markers']) this.drawMarkers();
+    if (changes['markers']) {
+      this.drawMarkers();
+      this.fitView();
+    }
     if (changes['selectedId']) this.applySelection();
   }
 
   ngOnDestroy(): void {
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = null;
     if (this.resizeTimer !== null) clearTimeout(this.resizeTimer);
+    window.removeEventListener('resize', this.onWindowResize);
     this.viewSub?.unsubscribe();
     this.map?.remove();
     this.map = null;
     this.markerEntries = [];
+  }
+
+  /** Every size change refreshes Leaflet's size. The first non-zero size also re-fits the view. */
+  private handleContainerResize(): void {
+    if (!this.map) return;
+
+    this.map.invalidateSize();
+    const { clientWidth, clientHeight } = this.containerRef.nativeElement;
+    if (!this.sized && clientWidth > 0 && clientHeight > 0) {
+      this.sized = true;
+      this.fitView();
+    }
+  }
+
+  private markUserMove(): void {
+    if (!this.programmatic) this.userAdjusted = true;
+  }
+
+  private moveProgrammatically(action: () => void): void {
+    this.programmatic = true;
+    try {
+      action();
+    } finally {
+      this.programmatic = false;
+    }
   }
 
   private handleMapClick(event: L.LeafletMouseEvent): void {
@@ -113,26 +160,43 @@ export class MapComponent implements AfterViewInit, OnChanges, OnDestroy {
     this.mapClick.emit({ lat: event.latlng.lat, lng: event.latlng.lng });
   }
 
-  /** Fits to the boundary, or to the municipality centre when there is no boundary. */
+  /**
+   * Fits to the boundary, else to the markers, else to the municipality centre.
+   * Does nothing once the user has panned or zoomed.
+   */
   private fitView(): void {
-    if (!this.map) return;
+    if (!this.map || this.userAdjusted) return;
 
     const rings = boundaryRings(this.boundary);
-    if (rings.length > 0) {
-      const bounds = L.latLngBounds(rings.flat());
-      if (bounds.isValid()) {
-        this.map.fitBounds(bounds, { padding: [16, 16] });
+    const boundsOfBoundary = rings.length > 0 ? L.latLngBounds(rings.flat()) : null;
+    if (boundsOfBoundary?.isValid()) {
+      this.fitTo(boundsOfBoundary, 18);
+      return;
+    }
+
+    if (this.markers.length > 0) {
+      const boundsOfMarkers = L.latLngBounds(this.markers.map(item => L.latLng(item.lat, item.lng)));
+      if (boundsOfMarkers.isValid()) {
+        this.fitTo(boundsOfMarkers, 16);
         return;
       }
     }
 
     this.viewSub?.unsubscribe();
     this.viewSub = this.municipality.get().pipe(take(1)).subscribe({
-      next: centre => this.map?.setView([centre.centerLatitude, centre.centerLongitude], centre.defaultZoom),
+      next: centre => {
+        if (this.userAdjusted) return;
+        this.moveProgrammatically(() => this.map?.setView([centre.centerLatitude, centre.centerLongitude], centre.defaultZoom));
+      },
       error: () => {
         // Without a centre the map keeps Leaflet's default view. The page shows its own error.
       }
     });
+  }
+
+  private fitTo(bounds: L.LatLngBounds, maxZoom: number): void {
+    if (!this.map) return;
+    this.moveProgrammatically(() => this.map?.fitBounds(bounds, { padding: [16, 16], maxZoom }));
   }
 
   private drawBoundary(): void {

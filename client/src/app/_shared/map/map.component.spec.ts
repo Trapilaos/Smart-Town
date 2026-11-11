@@ -124,6 +124,26 @@ describe('MapComponent', () => {
     expect(popup.textContent).toContain('<img src="x" onerror="alert(1)">');
   });
 
+  it('calls invalidateSize when the container changes size', async () => {
+    fixture.detectChanges();
+    const spy = spyOn(leafletMap()!, 'invalidateSize').and.callThrough();
+
+    fixture.componentRef.setInput('height', '300px');
+    fixture.detectChanges();
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    expect(spy).toHaveBeenCalled();
+  });
+
+  it('fits the view to the markers when there is no boundary', () => {
+    fixture.componentRef.setInput('markers', makeMarkers(3));
+    fixture.detectChanges();
+
+    const centre = leafletMap()!.getCenter();
+    expect(centre.lat).toBeGreaterThan(37.859);
+    expect(centre.lat).toBeLessThan(37.863);
+  });
+
   it('removes the map when destroyed', () => {
     fixture.detectChanges();
 
