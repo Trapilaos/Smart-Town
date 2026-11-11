@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using System.Net;
 using API.Data;
 using API.Entities;
@@ -62,13 +63,14 @@ public class ParkingServiceTests : IDisposable
     [Fact]
     public async Task Expired_reservation_frees_exactly_one_slot()
     {
-        _context.ParkingSpaces.Add(new ParkingSpace { Id = 1, Name = "Test", MaxVehicles = 10, CurrentVehicles = 3 });
+        // Occupancy is derived from active reservations, so a seeded CurrentVehicles value is overwritten.
+        _context.ParkingSpaces.Add(new ParkingSpace { Id = 1, Name = "Test", MaxVehicles = 10, CurrentVehicles = 0 });
         await _context.SaveChangesAsync();
-        var service = new ParkingService(_context);
+        var service = new ParkingService(_context, NullLogger<ParkingService>.Instance);
 
         var (success, _, _) = await service.ReserveParkingSpaceAsync("42", 1, DateTime.UtcNow.AddMinutes(1), 30);
         Assert.True(success);
-        Assert.Equal(4, (await _context.ParkingSpaces.FindAsync(1)).CurrentVehicles);
+        Assert.Equal(1, (await _context.ParkingSpaces.FindAsync(1)).CurrentVehicles);
 
         // Make the reservation long expired, then trigger the clean-up that runs on listing.
         var reservation = await _context.Reservations.SingleAsync();
@@ -77,18 +79,37 @@ public class ParkingServiceTests : IDisposable
 
         var spaces = await service.GetParkingSpacesAsync();
 
-        Assert.Equal(3, spaces.Single().CurrentVehicles);
+        Assert.Equal(0, spaces.Single().CurrentVehicles);
         Assert.Empty(_context.Reservations);
     }
 
-    [Fact]
-    public async Task Full_space_rejects_new_reservations()
-    {
-        _context.ParkingSpaces.Add(new ParkingSpace { Id = 1, Name = "Test", MaxVehicles = 1, CurrentVehicles = 1 });
-        await _context.SaveChangesAsync();
+    private ParkingService NewService() => new(_context, NullLogger<ParkingService>.Instance);
 
-        var (success, _, _) = await new ParkingService(_context).ReserveParkingSpaceAsync("42", 1, DateTime.UtcNow.AddMinutes(1), 30);
+    private async Task SeedSpaceWithReservationAsync(int maxVehicles, DateTime otherUserStart, int otherUserMinutes)
+    {
+        _context.ParkingSpaces.Add(new ParkingSpace { Id = 1, Name = "Test", MaxVehicles = maxVehicles });
+        _context.Reservations.Add(new Reservation { UserId = "7", ParkingSpaceId = 1, ReservationTime = otherUserStart, Duration = otherUserMinutes });
+        await _context.SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task Full_space_rejects_overlapping_reservation()
+    {
+        await SeedSpaceWithReservationAsync(1, DateTime.UtcNow, 60);
+
+        var (success, _, _) = await NewService().ReserveParkingSpaceAsync("42", 1, DateTime.UtcNow.AddMinutes(1), 30);
 
         Assert.False(success);
+    }
+
+    [Fact]
+    public async Task Future_reservation_does_not_block_a_non_overlapping_one()
+    {
+        // Someone has the only slot tomorrow; parking now for 30 minutes should still be allowed.
+        await SeedSpaceWithReservationAsync(1, DateTime.UtcNow.AddDays(1), 60);
+
+        var (success, _, _) = await NewService().ReserveParkingSpaceAsync("42", 1, DateTime.UtcNow.AddMinutes(1), 30);
+
+        Assert.True(success);
     }
 }

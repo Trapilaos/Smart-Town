@@ -21,7 +21,7 @@ public class WasteRouteTests : IDisposable
         _connection.Open();
         _context = new DataContext(new DbContextOptionsBuilder<DataContext>().UseSqlite(_connection).Options);
         _context.Database.EnsureCreated();
-        _mapper = new MapperConfiguration(c => c.AddMaps(typeof(MappingProfiles).Assembly)).CreateMapper();
+        _mapper = new MapperConfiguration(c => c.AddMaps(typeof(API.Helpers.AutoMapperProfiles).Assembly)).CreateMapper();
     }
 
     public void Dispose()
