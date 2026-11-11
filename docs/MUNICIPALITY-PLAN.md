@@ -310,3 +310,21 @@ Decisions (Opus, defaults the human can override):
   - public event JSON has no user ids
   - the public invoice responses contain no user data
   - no console errors, and no horizontal overflow at 375px
+
+---
+
+## 5. Fix round 1 (from the Sonnet QA report)
+
+The QA run passed every public, member and admin flow and every security check (headers, no user ids in public JSON, 401/403 on admin endpoints, generic 404 and 429 on public invoice lookups, no overflow at 375px). The fixes below are what remains.
+
+| # | Defect | Root cause (Opus) | Fix |
+|---|---|---|---|
+| D1 (high) | Leaflet maps start at the wrong size on /waste, /events/:id, /admin/bins and /admin/route: grey strips, markers off-screen, wrong fit | The map measures its container before the page's final layout (cards, flex and grid settle after init). The single `setTimeout(invalidateSize)` runs too early. | `MapComponent`: watch the container with a `ResizeObserver`. On every size change, call `map.invalidateSize()`. On the **first** non-zero size, and whenever `boundary` or `markers` change before the user has panned or zoomed, re-fit to the boundary's bounds (or the markers' bounds if there is no boundary). Disconnect the observer in `ngOnDestroy`. Fall back gracefully if `ResizeObserver` is missing. Add a spec that a resize triggers `invalidateSize`. |
+| D2 (high) | The OSM boundary search often returns "no results" | `SearchAsync` keeps only items that are themselves `boundary/administrative`. Natural queries such as "Glyfada, Attica, Greece" match a *place* (suburb or town node), so everything is filtered out. "Municipality of Glyfada" works. | In `BoundaryLookupService.SearchAsync`: after filtering, if there are fewer than `CandidateLimit` candidates, take the remaining raw results (places, nodes) and, for each (max 3), call `reverse?lat={lat}&lon={lon}&zoom=10&format=jsonv2&polygon_geojson=1&polygon_threshold=0.0005`. zoom=10 asks for the municipality level. Keep the result if it passes `TryParseCandidate`. De-duplicate by osmType+osmId. Keep the 1 request/s gate for each call. Tests (stubbed handler): a search returning only a suburb node plus a reverse returning a relation gives 1 candidate, and duplicates collapse. The UI message for zero results: "No municipality boundary found. Try the official name, e.g. 'Municipality of Glyfada'." |
+| D3 | Admin invoices show the payer name twice for registered users | The template renders both `payerName` and `username` | Show `payerName`, plus a small muted `@username` only when `username` is set and differs. |
+| D4 | The dashboard "Upcoming events" count includes the unpublished draft | It isn't filtered by `isPublished` | Count only `isPublished && date >= now`, and show "+N drafts" muted if there are any. |
+| D5 | Audit details show amounts as "12,34 EUR" (server culture is Greek) | String formatting with the current culture | Format audit amounts with `CultureInfo.InvariantCulture` ("EUR 12.34"). Grep the API for other culture-sensitive `ToString`/interpolation of decimals and dates in audit or details strings, and fix those too. |
+| D6 | The pay form's validation message doesn't explain the code alphabet | Message wording | "Enter the 8-character payment code from your bill (letters and numbers; the code never uses I, O, 0 or 1)." Uppercase the input as the user types. |
+| D7 | An admin can't issue an invoice to a registered account | `GET /api/admin/users-with-roles` returns no user id | Add `id` to the users-with-roles response (additive). The invoice form gets an optional "Citizen account" select (username) that sets `userId`, and pre-fills `payerName` from the username if it's empty. Keep "no account" as the default. |
+
+Rules: as in 2.4 and 1.7. A single Haiku builder works in the main checkout. The API is running and locks `API/bin`, so build and test with `-p:OutDir=<temp>/`. Don't start or stop servers.
