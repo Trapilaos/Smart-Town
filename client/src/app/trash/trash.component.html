@@ -1,59 +1,105 @@
-<div class="container mt-4">
-  <h2 class="text-center mb-4">Waste Management</h2>
+<div class="page">
+  <header class="page-header">
+    <h1 class="page-title">Waste Management</h1>
+    <p class="page-subtitle">Fill levels of town bins and the suggested collection route.</p>
+  </header>
 
-  @if (loading) {
-    <div class="d-flex justify-content-center align-items-center vh-100">
-      <div class="spinner-border text-primary" role="status">
-        <span class="visually-hidden">Loading...</span>
+  <section class="mb-5" aria-labelledby="bins-heading">
+    <h2 id="bins-heading" class="h4 mb-3"><i class="fas fa-trash text-primary"></i> Bins</h2>
+
+    @if (binsLoading) {
+      <div class="loading-state">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="mt-2 mb-0">Loading…</p>
       </div>
-    </div>
-  } @else {
-    @if (errorMessage) {
-      <div class="alert alert-danger mb-4">{{ errorMessage }}</div>
-    }
-    <div class="row">
-      <div class="col-md-6">
-        <h4 class="mb-3">Waste Bins Status</h4>
-        @for (bin of wasteBins; track bin) {
-          <div class="card waste-bin-card mb-3">
-            <div class="card-body">
-              <h5 class="card-title d-flex align-items-center">
-                <i class="fas fa-trash" [style.color]="bin.currentFillLevel >= bin.capacity * 0.8 ? 'red' : bin.currentFillLevel >= bin.capacity * 0.5 ? 'orange' : 'green'"></i>
-                <span class="ml-2">{{ bin.location }}</span>
-              </h5>
-              <div class="glass-container">
-                <div class="fill" [style.height.%]="(bin.currentFillLevel / bin.capacity) * 100"></div>
-              </div>
-              <p class="card-text">{{ bin.currentFillLevel }} liters / {{ bin.capacity }} liters</p>
-              <p class="card-text">Last Emptied: {{ bin.lastEmptied | date:'short' }}</p>
-              @if (isAdmin) {
-                <button class="btn btn-primary btn-block" (click)="emptyBin(bin)">
-                  <i class="fas fa-trash-restore"></i> Empty Bin
-                </button>
-              }
-            </div>
-          </div>
-        }
+    } @else if (binsError) {
+      <div class="alert alert-danger" role="alert">{{ binsError }}</div>
+    } @else if (wasteBins.length === 0) {
+      <div class="empty-state">
+        <i class="fas fa-trash"></i>
+        <p>No waste bins are registered yet.</p>
       </div>
-      <div class="col-md-6">
-        <h4 class="mb-3">Optimal Collection Path</h4>
-        @if (statusMessage) {
-          <div class="alert alert-info">{{ statusMessage }}</div>
-        }
-        @if (!statusMessage) {
-          <div class="path-map">
-            @for (location of optimalPath; track location; let i = $index) {
-              <div class="path-location" [ngClass]="{'path-start': i === 0, 'path-end': i === optimalPath.length - 1}">
-                <span>{{ location }}</span>
-                @if (i < optimalPath.length - 1) {
-                  <i class="fas fa-arrow-right"></i>
+    } @else {
+      <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+        @for (bin of wasteBins; track bin.id) {
+          <div class="col">
+            <article class="card card-elevated h-100">
+              <div class="card-body d-flex flex-column">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                  <i class="fas fa-trash" [ngClass]="fillTextClass(bin)" aria-hidden="true"></i>
+                  <h3 class="h6 mb-0">{{ bin.location }}</h3>
+                </div>
+
+                <div class="d-flex justify-content-between small mb-1">
+                  <span class="text-muted">{{ bin.currentFillLevel }} / {{ bin.capacity }} L</span>
+                  <strong>{{ fillPercent(bin) }}%</strong>
+                </div>
+                <div class="progress" role="progressbar"
+                  [attr.aria-label]="bin.location + ' fill level'"
+                  [attr.aria-valuenow]="fillPercent(bin)" aria-valuemin="0" aria-valuemax="100">
+                  <div class="progress-bar" [ngClass]="fillClass(bin)" [style.width.%]="fillPercent(bin)"></div>
+                </div>
+
+                <small class="text-muted mt-2" [title]="bin.lastEmptied | date:'medium'">
+                  Last emptied {{ relativeTime(bin.lastEmptied) }}
+                </small>
+
+                @if (isAdmin) {
+                  <button type="button" class="btn btn-outline-primary btn-sm mt-3 align-self-start"
+                    [disabled]="emptyingBinId !== null"
+                    (click)="emptyBin(bin)">
+                    @if (emptyingBinId === bin.id) {
+                      <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                    } @else {
+                      <i class="fas fa-trash-restore"></i>
+                    }
+                    Empty bin
+                  </button>
                 }
               </div>
-            }
+            </article>
           </div>
         }
       </div>
-    </div>
-  }
+    }
+  </section>
 
+  <section aria-labelledby="path-heading">
+    <h2 id="path-heading" class="h4 mb-3"><i class="fas fa-route text-primary"></i> Collection route</h2>
+
+    @if (pathLoading) {
+      <div class="loading-state">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="mt-2 mb-0">Loading…</p>
+      </div>
+    } @else if (pathError) {
+      <div class="alert alert-danger" role="alert">{{ pathError }}</div>
+    } @else if (pathMessage) {
+      <div class="empty-state">
+        <i class="fas fa-check-circle"></i>
+        <p>{{ pathMessage }}</p>
+      </div>
+    } @else if (optimalPath.length === 0) {
+      <div class="empty-state">
+        <i class="fas fa-route"></i>
+        <p>No stops on the route yet.</p>
+      </div>
+    } @else {
+      <ol class="list-group list-group-numbered card-elevated">
+        @for (location of optimalPath; track $index; let i = $index) {
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <span>
+              {{ location }}
+              @if (i === 0) {
+                <span class="badge bg-primary ms-2">Start</span>
+              }
+            </span>
+            @if (isBackToStart(i)) {
+              <span class="badge bg-success">Back to start</span>
+            }
+          </li>
+        }
+      </ol>
+    }
+  </section>
 </div>
