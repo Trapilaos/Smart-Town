@@ -16,48 +16,51 @@ namespace API.Controllers
             _eventService = eventService;
         }
 
-        [HttpPost]
-        [Authorize(Policy = "RequireAdminRole")]
-        public async Task<IActionResult> CreateEvent([FromBody] CreateEventDTO dto)
-        {
-            var createdEvent = await _eventService.CreateEventAsync(new Event
-            {
-                Title = dto.Title,
-                Description = dto.Description,
-                PhotoUrl = dto.PhotoUrl,
-                Date = dto.Date.ToUtc()
-            });
-            return Ok(createdEvent);
-        }
-
+        /// <summary>Published events. Public. Signed-in callers also get isInterested.</summary>
+        /// <param name="fromDate">Only events starting on or after this UTC instant.</param>
+        /// <param name="category">Culture, Sports, Council, Environment or Other.</param>
+        /// <param name="includePast">When false (the default), events that have ended are hidden.</param>
         [HttpGet]
-        public async Task<IActionResult> GetEvents()
+        public async Task<ActionResult<List<EventDTO>>> GetEvents(
+            [FromQuery(Name = "from")] DateTime? fromDate,
+            [FromQuery] string category,
+            [FromQuery] bool includePast = false)
         {
-            var events = await _eventService.GetEventsAsync();
+            EventCategory? parsed = null;
+            if (!string.IsNullOrWhiteSpace(category))
+            {
+                if (!Enum.TryParse<EventCategory>(category.Trim(), ignoreCase: true, out var value) || !Enum.IsDefined(value))
+                    return BadRequest("Unknown event category");
+                parsed = value;
+            }
+
+            var events = await _eventService.GetPublishedAsync(fromDate?.ToUtc(), parsed, includePast, ViewerId);
             return Ok(events);
         }
 
-        [HttpPost("{eventId}/interest")]
+        [HttpGet("{eventId:int}")]
+        public async Task<ActionResult<EventDTO>> GetEvent(int eventId)
+        {
+            var ev = await _eventService.GetPublishedByIdAsync(eventId, ViewerId);
+            return ev == null ? NotFound() : Ok(ev);
+        }
+
+        [HttpPost("{eventId:int}/interest")]
         [Authorize(Policy = "RequireMemberRole")]
-        public async Task<IActionResult> DeclareInterest(int eventId)
+        public async Task<ActionResult<EventDTO>> DeclareInterest(int eventId)
         {
-            var userId = User.GetUserId().ToString();
-            var eventItem = await _eventService.DeclareInterestAsync(eventId, userId);
-            if (eventItem == null)
-                return NotFound();
-
-            return Ok(eventItem);
+            var ev = await _eventService.SetInterestAsync(eventId, ActorId, interested: true);
+            return ev == null ? NotFound() : Ok(ev);
         }
 
-        [HttpDelete("{eventId}")]
-        [Authorize(Policy = "RequireAdminRole")]
-        public async Task<IActionResult> DeleteEvent(int eventId)
+        [HttpDelete("{eventId:int}/interest")]
+        [Authorize(Policy = "RequireMemberRole")]
+        public async Task<ActionResult<EventDTO>> WithdrawInterest(int eventId)
         {
-            var result = await _eventService.DeleteEventAsync(eventId);
-            if (!result)
-                return NotFound();
-
-            return Ok();
+            var ev = await _eventService.SetInterestAsync(eventId, ActorId, interested: false);
+            return ev == null ? NotFound() : Ok(ev);
         }
+
+        private string ViewerId => User.Identity?.IsAuthenticated == true ? ActorId : null;
     }
 }
