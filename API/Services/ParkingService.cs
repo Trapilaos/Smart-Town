@@ -4,7 +4,9 @@ using API.Entities;
 using API.Errors;
 using API.Helpers;
 using API.Interfaces;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using System.Data;
 
 namespace API.Services
 {
@@ -15,6 +17,9 @@ namespace API.Services
         private readonly DataContext _context;
         private readonly IMunicipalityService _municipalities;
         private readonly ILogger<ParkingService> _logger;
+
+        /// <summary>One reservation at a time per process. See ReserveParkingSpaceAsync.</summary>
+        private static readonly SemaphoreSlim ReservationGate = new(1, 1);
 
         public ParkingService(DataContext context, IMunicipalityService municipalities, ILogger<ParkingService> logger)
         {
@@ -35,10 +40,43 @@ namespace API.Services
             return await ToDtosAsync(spaces);
         }
 
+        /// <summary>
+        /// Reserves a space if its peak occupancy and the user's own bookings allow it. The check and the insert
+        /// run as one unit. The write lock is taken up front (BEGIN IMMEDIATE), so two bookings cannot both see
+        /// the last free slot. The process-wide gate is a second guard: the app runs as a single instance, and it
+        /// keeps concurrent calls from contending for the SQLite write lock.
+        /// </summary>
         public async Task<(bool Success, DateTime? StartTime, DateTime? EndTime)> ReserveParkingSpaceAsync(string userId, int parkingSpaceId, DateTime reservationTime, int duration)
         {
-            await SyncReservationsAsync();
+            await ReservationGate.WaitAsync();
+            try
+            {
+                await SyncReservationsAsync();
 
+                await _context.Database.OpenConnectionAsync();
+                var connection = (SqliteConnection)_context.Database.GetDbConnection();
+                var dbTransaction = connection.BeginTransaction(IsolationLevel.Serializable, deferred: false);
+                await using var transaction = await _context.Database.UseTransactionAsync(dbTransaction);
+                try
+                {
+                    var result = await ReserveInsideTransactionAsync(userId, parkingSpaceId, reservationTime, duration);
+                    await transaction.CommitAsync();
+                    return result;
+                }
+                catch
+                {
+                    await transaction.RollbackAsync();
+                    throw;
+                }
+            }
+            finally
+            {
+                ReservationGate.Release();
+            }
+        }
+
+        private async Task<(bool Success, DateTime? StartTime, DateTime? EndTime)> ReserveInsideTransactionAsync(string userId, int parkingSpaceId, DateTime reservationTime, int duration)
+        {
             var parkingSpace = await _context.ParkingSpaces.FindAsync(parkingSpaceId);
             if (parkingSpace == null || !parkingSpace.IsActive)
             {
