@@ -1,6 +1,6 @@
 import { NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
-import { HTTP_INTERCEPTORS, HttpClientModule } from '@angular/common/http';
+import { HTTP_INTERCEPTORS, provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
@@ -23,36 +23,30 @@ import { AdminDashboardComponent } from './admin/admin-dashboard/admin-dashboard
 import { EventCreateComponent } from './admin/event-create/event-create.component';
 import { UserManagementComponent } from './admin/user-management/user-management.component';
 
-@NgModule({
-  declarations: [
-    AppComponent,
-    NavComponent,
-    HomeComponent,
-    RegisterComponent,
-    TrafficComponent,
-    LightingComponent,
-    PayComponent,
-    TrashComponent,
-    TestErrorComponent,
-    NotFoundComponent,
-    ServerErrorComponent,
-    MemberComponent,
-    AdminDashboardComponent,
-    EventCreateComponent,
-    UserManagementComponent 
-  ],
-  imports: [
-    BrowserModule,
-    AppRoutingModule,
-    HttpClientModule,
-    BrowserAnimationsModule,
-    FormsModule,
-    SharedModule
-  ],
-  providers: [
-    { provide: HTTP_INTERCEPTORS, useClass: ErrorInterceptor, multi: true },
-    { provide: HTTP_INTERCEPTORS, useClass: JwtInterceptor, multi: true }
-  ],
-  bootstrap: [AppComponent]
-})
+@NgModule({ declarations: [
+        AppComponent,
+        NavComponent,
+        HomeComponent,
+        RegisterComponent,
+        TrafficComponent,
+        LightingComponent,
+        PayComponent,
+        TrashComponent,
+        TestErrorComponent,
+        NotFoundComponent,
+        ServerErrorComponent,
+        MemberComponent,
+        AdminDashboardComponent,
+        EventCreateComponent,
+        UserManagementComponent
+    ],
+    bootstrap: [AppComponent], imports: [BrowserModule,
+        AppRoutingModule,
+        BrowserAnimationsModule,
+        FormsModule,
+        SharedModule], providers: [
+        { provide: HTTP_INTERCEPTORS, useClass: ErrorInterceptor, multi: true },
+        { provide: HTTP_INTERCEPTORS, useClass: JwtInterceptor, multi: true },
+        provideHttpClient(withInterceptorsFromDi())
+    ] })
 export class AppModule { }
