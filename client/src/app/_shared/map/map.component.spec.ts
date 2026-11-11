@@ -124,15 +124,106 @@ describe('MapComponent', () => {
     expect(popup.textContent).toContain('<img src="x" onerror="alert(1)">');
   });
 
-  it('calls invalidateSize when the container changes size', async () => {
+  /**
+   * Replaces requestAnimationFrame with a queue that the test flushes by hand,
+   * so resize handling runs at a known point and never depends on real frame timing.
+   */
+  const stubFrames = () => {
+    let nextId = 1;
+    const queue = new Map<number, FrameRequestCallback>();
+    spyOn(window, 'requestAnimationFrame').and.callFake((callback: FrameRequestCallback) => {
+      const id = nextId++;
+      queue.set(id, callback);
+      return id;
+    });
+    spyOn(window, 'cancelAnimationFrame').and.callFake((id: number) => {
+      queue.delete(id);
+    });
+    return {
+      pending: () => queue.size,
+      flush: () => {
+        const callbacks = Array.from(queue.values());
+        queue.clear();
+        callbacks.forEach(callback => callback(0));
+      }
+    };
+  };
+
+  const scheduleResize = () => (component as unknown as { scheduleResize: () => void }).scheduleResize();
+  const userAdjusted = () => (component as unknown as { userAdjusted: boolean }).userAdjusted;
+
+  it('calls invalidateSize when the container changes size', () => {
     fixture.detectChanges();
+    const frames = stubFrames();
     const spy = spyOn(leafletMap()!, 'invalidateSize').and.callThrough();
 
     fixture.componentRef.setInput('height', '300px');
     fixture.detectChanges();
-    await new Promise(resolve => setTimeout(resolve, 100));
+    scheduleResize();
+    frames.flush();
 
     expect(spy).toHaveBeenCalled();
+  });
+
+  it('does not count a programmatic fit as a user move', () => {
+    fixture.detectChanges();
+    const spy = spyOn(leafletMap()!, 'fitBounds').and.callThrough();
+
+    fixture.componentRef.setInput('markers', makeMarkers(3));
+    fixture.detectChanges();
+    leafletMap()!.fire('zoomstart');
+
+    expect(spy).toHaveBeenCalledWith(jasmine.anything(), jasmine.objectContaining({ animate: false }));
+    expect(userAdjusted()).toBeFalse();
+  });
+
+  it('re-fits on a second resize as well as the first', () => {
+    fixture.componentRef.setInput('markers', makeMarkers(3));
+    fixture.detectChanges();
+    const frames = stubFrames();
+    const fitView = spyOn(component as unknown as { fitView: () => void }, 'fitView').and.callThrough();
+
+    scheduleResize();
+    frames.flush();
+    expect(fitView).toHaveBeenCalledTimes(1);
+
+    fitView.calls.reset();
+    scheduleResize();
+    frames.flush();
+    expect(fitView).toHaveBeenCalledTimes(1);
+  });
+
+  it('stops automatic fits after a pointerdown on the container', () => {
+    fixture.componentRef.setInput('markers', makeMarkers(3));
+    fixture.detectChanges();
+    const frames = stubFrames();
+    const fitBounds = spyOn(leafletMap()!, 'fitBounds').and.callThrough();
+    const invalidate = spyOn(leafletMap()!, 'invalidateSize').and.callThrough();
+
+    const container = fixture.nativeElement.querySelector('.leaflet-container') as HTMLElement;
+    container.dispatchEvent(new Event('pointerdown'));
+    expect(userAdjusted()).toBeTrue();
+
+    fitBounds.calls.reset();
+    scheduleResize();
+    frames.flush();
+
+    expect(invalidate).toHaveBeenCalled();
+    expect(fitBounds).not.toHaveBeenCalled();
+  });
+
+  it('cancels a pending resize frame when destroyed', () => {
+    fixture.detectChanges();
+    const frames = stubFrames();
+    const cancel = window.cancelAnimationFrame as jasmine.Spy;
+
+    scheduleResize();
+    expect(frames.pending()).toBe(1);
+
+    fixture.destroy();
+
+    expect(cancel).toHaveBeenCalled();
+    expect(frames.pending()).toBe(0);
   });
 
   it('fits the view to the markers when there is no boundary', () => {

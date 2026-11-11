@@ -63,13 +63,15 @@ export class MapComponent implements AfterViewInit, OnChanges, OnDestroy {
   private viewSub: Subscription | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private resizeTimer: ReturnType<typeof setTimeout> | null = null;
-  /** True once the container has a non-zero size. The first size triggers a fit. */
-  private sized = false;
+  /** Pending requestAnimationFrame handle for a coalesced resize. */
+  private resizeFrame: number | null = null;
   /** True after the user pans or zooms. Automatic fits stop after that. */
   private userAdjusted = false;
   /** True while the component moves the map itself, so those moves are not counted as user moves. */
   private programmatic = false;
-  private readonly onWindowResize = () => this.handleContainerResize();
+  private readonly onWindowResize = () => this.scheduleResize();
+  /** DOM input on the container counts as a user move. Leaflet's zoomstart is not used, because it fires asynchronously. */
+  private readonly onUserInput = () => this.markUserMove();
 
   constructor(private municipality: MunicipalityService) {}
 
@@ -81,8 +83,13 @@ export class MapComponent implements AfterViewInit, OnChanges, OnDestroy {
     this.routeLayer.addTo(map);
     this.markerLayer.addTo(map);
     map.on('click', (event: L.LeafletMouseEvent) => this.handleMapClick(event));
-    map.on('dragstart zoomstart', () => this.markUserMove());
+    map.on('dragstart', () => this.markUserMove());
     this.map = map;
+
+    container.addEventListener('pointerdown', this.onUserInput);
+    container.addEventListener('wheel', this.onUserInput, { passive: true });
+    container.addEventListener('touchstart', this.onUserInput, { passive: true });
+    container.addEventListener('keydown', this.onUserInput);
 
     this.drawBoundary();
     this.drawRoute();
@@ -91,10 +98,10 @@ export class MapComponent implements AfterViewInit, OnChanges, OnDestroy {
 
     // The container is laid out after this hook runs (cards, flex and grid settle later), so track its size.
     if (typeof ResizeObserver !== 'undefined') {
-      this.resizeObserver = new ResizeObserver(() => this.handleContainerResize());
+      this.resizeObserver = new ResizeObserver(() => this.scheduleResize());
       this.resizeObserver.observe(container);
     } else {
-      this.resizeTimer = setTimeout(() => this.handleContainerResize());
+      this.resizeTimer = setTimeout(() => this.scheduleResize());
       window.addEventListener('resize', this.onWindowResize);
     }
   }
@@ -118,23 +125,35 @@ export class MapComponent implements AfterViewInit, OnChanges, OnDestroy {
     this.resizeObserver?.disconnect();
     this.resizeObserver = null;
     if (this.resizeTimer !== null) clearTimeout(this.resizeTimer);
+    if (this.resizeFrame !== null) cancelAnimationFrame(this.resizeFrame);
+    this.resizeFrame = null;
     window.removeEventListener('resize', this.onWindowResize);
+    const container = this.containerRef.nativeElement;
+    container.removeEventListener('pointerdown', this.onUserInput);
+    container.removeEventListener('wheel', this.onUserInput);
+    container.removeEventListener('touchstart', this.onUserInput);
+    container.removeEventListener('keydown', this.onUserInput);
     this.viewSub?.unsubscribe();
     this.map?.remove();
     this.map = null;
     this.markerEntries = [];
   }
 
-  /** Every size change refreshes Leaflet's size. The first non-zero size also re-fits the view. */
+  /** Coalesces resize notifications into one frame. */
+  private scheduleResize(): void {
+    if (this.resizeFrame !== null) return;
+    this.resizeFrame = requestAnimationFrame(() => {
+      this.resizeFrame = null;
+      this.handleContainerResize();
+    });
+  }
+
+  /** Every resize refreshes Leaflet's size, then re-fits the view until the user has moved the map. */
   private handleContainerResize(): void {
     if (!this.map) return;
 
     this.map.invalidateSize();
-    const { clientWidth, clientHeight } = this.containerRef.nativeElement;
-    if (!this.sized && clientWidth > 0 && clientHeight > 0) {
-      this.sized = true;
-      this.fitView();
-    }
+    if (!this.userAdjusted) this.fitView();
   }
 
   private markUserMove(): void {
@@ -186,7 +205,7 @@ export class MapComponent implements AfterViewInit, OnChanges, OnDestroy {
     this.viewSub = this.municipality.get().pipe(take(1)).subscribe({
       next: centre => {
         if (this.userAdjusted) return;
-        this.moveProgrammatically(() => this.map?.setView([centre.centerLatitude, centre.centerLongitude], centre.defaultZoom));
+        this.moveProgrammatically(() => this.map?.setView([centre.centerLatitude, centre.centerLongitude], centre.defaultZoom, { animate: false }));
       },
       error: () => {
         // Without a centre the map keeps Leaflet's default view. The page shows its own error.
@@ -196,7 +215,7 @@ export class MapComponent implements AfterViewInit, OnChanges, OnDestroy {
 
   private fitTo(bounds: L.LatLngBounds, maxZoom: number): void {
     if (!this.map) return;
-    this.moveProgrammatically(() => this.map?.fitBounds(bounds, { padding: [16, 16], maxZoom }));
+    this.moveProgrammatically(() => this.map?.fitBounds(bounds, { padding: [16, 16], maxZoom, animate: false }));
   }
 
   private drawBoundary(): void {
