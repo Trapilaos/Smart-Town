@@ -160,6 +160,61 @@ public class MunicipalityTests : IDisposable
     }
 
     [Fact]
+    public async Task Place_only_search_resolves_the_containing_municipality_by_reverse_lookup()
+    {
+        var handler = new StubHttpHandler(request => StubHttpHandler.Json(
+            request.RequestUri!.AbsolutePath == "/reverse" ? RelationJson(1234) : $"[{PlaceJson(77)}]"));
+
+        var candidates = await CreateLookup(handler).SearchAsync("Glyfada, Attica, Greece");
+
+        var candidate = Assert.Single(candidates);
+        Assert.Equal("R", candidate.OsmType);
+        Assert.Equal(1234, candidate.OsmId);
+        Assert.Equal(2, handler.Requests.Count);
+        var reverse = handler.Requests[1].RequestUri!;
+        Assert.Equal("/reverse", reverse.AbsolutePath);
+        Assert.Contains("zoom=10", reverse.Query);
+        Assert.Contains("lat=37.86", reverse.Query);
+    }
+
+    [Fact]
+    public async Task Reverse_results_that_repeat_a_boundary_collapse_to_one_candidate()
+    {
+        var handler = new StubHttpHandler(request => StubHttpHandler.Json(
+            request.RequestUri!.AbsolutePath == "/reverse" ? RelationJson(1234) : $"[{PlaceJson(77)},{PlaceJson(78)}]"));
+
+        var candidates = await CreateLookup(handler).SearchAsync("Glyfada");
+
+        Assert.Single(candidates);
+        Assert.Equal(3, handler.Requests.Count);
+    }
+
+    [Fact]
+    public async Task Reverse_lookups_are_capped_at_three_per_search()
+    {
+        var reverses = 0;
+        var places = string.Join(",", Enumerable.Range(0, 5).Select(i => PlaceJson(77 + i)));
+        var handler = new StubHttpHandler(request => request.RequestUri!.AbsolutePath == "/reverse"
+            ? StubHttpHandler.Json(RelationJson(1000 + ++reverses))
+            : StubHttpHandler.Json($"[{places}]"));
+
+        var candidates = await CreateLookup(handler).SearchAsync("Glyfada");
+
+        Assert.Equal(3, candidates.Count);
+        Assert.Equal(4, handler.Requests.Count);
+    }
+
+    private const string PlaceTemplate =
+        """{"place_id":10,"osm_type":"node","osm_id":OSMID,"lat":"37.8600","lon":"23.7500","category":"place","type":"suburb","name":"Glyfada","display_name":"Glyfada, Attica, Greece","geojson":{"type":"Point","coordinates":[23.75,37.86]}}""";
+
+    private const string RelationTemplate =
+        """{"place_id":2,"osm_type":"relation","osm_id":OSMID,"lat":"37.8650","lon":"23.7530","category":"boundary","type":"administrative","name":"Glyfada","display_name":"Glyfada, Attica, Greece","geojson":{"type":"Polygon","coordinates":[[[23.73,37.87],[23.79,37.87],[23.79,37.84],[23.73,37.84],[23.73,37.87]]]}}""";
+
+    private static string PlaceJson(long osmId) => PlaceTemplate.Replace("OSMID", osmId.ToString());
+
+    private static string RelationJson(long osmId) => RelationTemplate.Replace("OSMID", osmId.ToString());
+
+    [Fact]
     public async Task Requests_carry_a_generic_user_agent_and_no_personal_data()
     {
         var handler = Responding(SearchFixture);
@@ -167,7 +222,9 @@ public class MunicipalityTests : IDisposable
 
         await lookup.SearchAsync("Glyfada, Attica, Greece");
 
-        var request = Assert.Single(handler.Requests);
+        // The fixture's place node also triggers a reverse lookup, so check the search request (the first one).
+        Assert.True(handler.Requests.Count >= 1);
+        var request = handler.Requests[0];
         var userAgent = request.Headers.UserAgent.ToString();
         Assert.Contains("SmartTown-Municipality-Platform/1.0", userAgent);
         Assert.DoesNotContain("@", userAgent);
@@ -224,7 +281,8 @@ public class MunicipalityTests : IDisposable
         var municipality = await LoadMunicipalityAsync();
         Assert.False(municipality.BoundaryIsApproximate);
         Assert.Equal("OpenStreetMap relation 1234", municipality.BoundarySource);
-        Assert.Single(handler.Requests);
+        // The search, then one reverse lookup for the fixture's place node.
+        Assert.Equal(2, handler.Requests.Count);
         Assert.Contains("Glyfada", Uri.UnescapeDataString(handler.Requests[0].RequestUri.Query));
     }
 
@@ -236,10 +294,11 @@ public class MunicipalityTests : IDisposable
         var scopes = provider.GetRequiredService<IServiceScopeFactory>();
 
         await BoundaryAutoFetchService.FetchOnceAsync(scopes, Config(), NullLogger.Instance);
+        var requestsAfterFirst = handler.Requests.Count;
         var second = await BoundaryAutoFetchService.FetchOnceAsync(scopes, Config(), NullLogger.Instance);
 
         Assert.False(second);
-        Assert.Single(handler.Requests);
+        Assert.Equal(requestsAfterFirst, handler.Requests.Count);
         provider.Dispose();
     }
 

@@ -29,6 +29,8 @@ namespace API.Services
         public const string BaseUrl = "https://nominatim.openstreetmap.org/";
         public const string UserAgent = "SmartTown-Municipality-Platform/1.0";
         public const int CandidateLimit = 5;
+        /// <summary>At most this many place results are resolved to their containing boundary per search.</summary>
+        public const int MaxReverseLookups = 3;
         private const string PolygonOptions = "polygon_geojson=1&polygon_threshold=0.0005";
 
         // Shared by every instance: Nominatim's limit applies to the whole process, not one client.
@@ -63,12 +65,44 @@ namespace API.Services
                 throw new BoundaryLookupException("Boundary lookup returned an unexpected response");
 
             var candidates = new List<BoundaryCandidate>();
+            var seen = new HashSet<(string OsmType, long OsmId)>();
+            var places = new List<JsonElement>();
             foreach (var item in document.RootElement.EnumerateArray())
             {
                 var candidate = TryParseCandidate(item);
-                if (candidate != null) candidates.Add(candidate);
+                if (candidate != null)
+                {
+                    if (seen.Add((candidate.OsmType, candidate.OsmId))) candidates.Add(candidate);
+                }
+                else if ((ReadString(item, "category") ?? ReadString(item, "class")) != "boundary")
+                {
+                    places.Add(item);
+                }
+            }
+
+            // Natural queries such as "Glyfada, Attica, Greece" often match a place (a suburb or town node) rather
+            // than the municipality. Ask which municipality-level boundary contains the first few of those places.
+            foreach (var place in places.Take(MaxReverseLookups))
+            {
+                if (candidates.Count >= CandidateLimit) break;
+                if (!TryParseCoordinate(ReadString(place, "lat"), out var lat) || !TryParseCoordinate(ReadString(place, "lon"), out var lng))
+                    continue;
+
+                var containing = await ReverseAsync(lat, lng, ct);
+                if (containing != null && seen.Add((containing.OsmType, containing.OsmId))) candidates.Add(containing);
             }
             return candidates;
+        }
+
+        /// <summary>The municipality-level boundary (zoom 10) that contains a point. Null when there is none.</summary>
+        private async Task<BoundaryCandidate> ReverseAsync(double lat, double lng, CancellationToken ct)
+        {
+            var latText = lat.ToString(CultureInfo.InvariantCulture);
+            var lngText = lng.ToString(CultureInfo.InvariantCulture);
+            var url = $"reverse?lat={latText}&lon={lngText}&zoom=10&format=jsonv2&{PolygonOptions}";
+            using var document = await GetJsonAsync(url, ct);
+            if (document.RootElement.ValueKind != JsonValueKind.Object) return null;
+            return TryParseCandidate(document.RootElement);
         }
 
         /// <summary>Fetches one exact OSM object. Returns null when it is not an administrative boundary polygon.</summary>
