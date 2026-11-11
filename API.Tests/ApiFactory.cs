@@ -1,0 +1,67 @@
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+
+namespace API.Tests;
+
+/// <summary>
+/// Boots the real API against a named, shared-cache in-memory SQLite database.
+/// A keeper connection stays open for the factory's lifetime so the database survives.
+/// Configuration is passed through environment variables because Program reads it while building.
+/// </summary>
+public class ApiFactory : WebApplicationFactory<Program>
+{
+    public const string AdminPassword = "Pa$$w0rd"; // seeded by UserSeed
+
+    private readonly SqliteConnection _keeper;
+    private readonly Dictionary<string, string> _previousEnv = new();
+
+    public ApiFactory()
+    {
+        var connectionString = $"Data Source=file:smarttown-{Guid.NewGuid():N}?mode=memory&cache=shared";
+        _keeper = new SqliteConnection(connectionString);
+        _keeper.Open();
+
+        SetEnv("ConnectionStrings__DefaultConnection", connectionString);
+        SetEnv("TokenKey", new string('k', 96) + "-test-only-signing-key");
+    }
+
+    private void SetEnv(string name, string value)
+    {
+        _previousEnv[name] = Environment.GetEnvironmentVariable(name);
+        Environment.SetEnvironmentVariable(name, value);
+    }
+
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    {
+        builder.UseEnvironment("Testing");
+        builder.ConfigureLogging(l => l.SetMinimumLevel(LogLevel.Warning));
+        builder.ConfigureServices(services =>
+        {
+            // The traffic generator wipes and refills data from an async void timer; keep it out of tests.
+            var hosted = services.Where(d => d.ServiceType == typeof(IHostedService)).ToList();
+            foreach (var d in hosted) services.Remove(d);
+        });
+    }
+
+    public HttpClient CreateApiClient() => CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+    protected override void Dispose(bool disposing)
+    {
+        base.Dispose(disposing);
+        if (!disposing) return;
+        _keeper.Dispose();
+        foreach (var (name, value) in _previousEnv)
+            Environment.SetEnvironmentVariable(name, value);
+    }
+}
+
+/// <summary>One host and one database for all API tests; config travels via process-wide env vars so factories must not run in parallel.</summary>
+[CollectionDefinition(Name)]
+public class ApiCollection : ICollectionFixture<ApiFactory>
+{
+    public const string Name = "Api";
+}
