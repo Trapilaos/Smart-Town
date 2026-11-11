@@ -33,6 +33,7 @@ namespace API.Extensions
             services.AddRateLimitPolicies(config);
             services.AddHostedService<BoundaryAutoFetchService>();
             services.AddHostedService<TrafficDataBackgroundService>();
+            services.AddHostedService<ReservationCleanupService>();
             services.AddAutoMapper(typeof(AutoMapperProfiles).Assembly);
 
             return services;

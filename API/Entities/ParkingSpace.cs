@@ -18,6 +18,7 @@ namespace API.Entities
         public double Latitude { get; set; }
         public double Longitude { get; set; }
         public int MaxVehicles { get; set; }
+        /// <summary>Not maintained and not read. Occupancy is computed from the reservations when a space is listed.</summary>
         public int CurrentVehicles { get; set; }
         public decimal HourlyRate { get; set; }
         /// <summary>False after a soft delete. Inactive spaces cannot be reserved.</summary>

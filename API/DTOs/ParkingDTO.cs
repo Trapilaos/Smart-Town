@@ -15,13 +15,13 @@ namespace API.DTOs
         public double Longitude { get; set; }
         public decimal HourlyRate { get; set; }
         public int MaxVehicles { get; set; }
-        /// <summary>Reservations held by the space, past starts included until they expire (kept for compatibility).</summary>
+        /// <summary>Reservations held by the space, past starts included until they end (kept for compatibility).</summary>
         public int CurrentVehicles { get; set; }
         /// <summary>MaxVehicles minus the reservations that have started and not yet ended, never below zero.</summary>
         public int FreeNow { get; set; }
         public bool IsActive { get; set; }
 
-        public static ParkingSpaceDTO From(ParkingSpace space, int activeNow) => new()
+        public static ParkingSpaceDTO From(ParkingSpace space, int activeNow, int held) => new()
         {
             Id = space.Id,
             Name = space.Name,
@@ -31,7 +31,7 @@ namespace API.DTOs
             Longitude = space.Longitude,
             HourlyRate = space.HourlyRate,
             MaxVehicles = space.MaxVehicles,
-            CurrentVehicles = space.CurrentVehicles,
+            CurrentVehicles = held,
             FreeNow = Math.Max(0, space.MaxVehicles - activeNow),
             IsActive = space.IsActive,
         };

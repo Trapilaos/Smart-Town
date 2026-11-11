@@ -28,10 +28,9 @@ namespace API.Services
             _logger = logger;
         }
 
+        /// <summary>Read-only. Occupancy is computed from the reservations at the moment of the call.</summary>
         public async Task<List<ParkingSpaceDTO>> GetParkingSpacesAsync()
         {
-            await SyncReservationsAsync();
-
             var spaces = await _context.ParkingSpaces.AsNoTracking()
                 .Where(p => p.IsActive)
                 .OrderBy(p => p.Id)
@@ -51,8 +50,6 @@ namespace API.Services
             await ReservationGate.WaitAsync();
             try
             {
-                await SyncReservationsAsync();
-
                 await _context.Database.OpenConnectionAsync();
                 var connection = (SqliteConnection)_context.Database.GetDbConnection();
                 var dbTransaction = connection.BeginTransaction(IsolationLevel.Serializable, deferred: false);
@@ -118,7 +115,6 @@ namespace API.Services
                 Duration = duration
             });
 
-            parkingSpace.CurrentVehicles++;
             await _context.SaveChangesAsync();
 
             return (true, reservationTime, endTime);
@@ -138,10 +134,9 @@ namespace API.Services
                 .FirstOrDefault();
         }
 
+        /// <summary>Read-only, like <see cref="GetParkingSpacesAsync"/>.</summary>
         public async Task<List<ParkingSpaceDTO>> GetAllForAdminAsync()
         {
-            await SyncReservationsAsync();
-
             var spaces = await _context.ParkingSpaces.AsNoTracking().OrderBy(p => p.Id).ToListAsync();
             return await ToDtosAsync(spaces);
         }
@@ -155,7 +150,7 @@ namespace API.Services
             _context.ParkingSpaces.Add(space);
             await _context.SaveChangesAsync();
 
-            return ParkingSpaceDTO.From(space, 0);
+            return ParkingSpaceDTO.From(space, activeNow: 0, held: 0);
         }
 
         public async Task<ParkingSpaceDTO> UpdateAsync(int id, ParkingSpaceInputDTO input)
@@ -223,18 +218,29 @@ namespace API.Services
             space.IsActive = input.IsActive;
         }
 
-        /// <summary>Occupancy now for each space: reservations that have started and not yet ended.</summary>
+        /// <summary>
+        /// Occupancy for each space, computed now and never stored. Active: started and not yet ended.
+        /// Held: not yet ended, including bookings that start later. Expired rows are ignored here and removed
+        /// by ReservationCleanupService.
+        /// </summary>
         private async Task<List<ParkingSpaceDTO>> ToDtosAsync(IReadOnlyCollection<ParkingSpace> spaces)
         {
             var now = DateTime.UtcNow;
-            var activeNow = (await _context.Reservations.AsNoTracking()
-                    .Where(r => r.ReservationTime <= now)
-                    .ToListAsync())
+            // Loaded into memory because SQLite cannot translate DateTime arithmetic on columns.
+            var live = (await _context.Reservations.AsNoTracking().ToListAsync())
                 .Where(r => r.ReservationTime.AddMinutes(r.Duration) > now)
+                .ToList();
+
+            var activeNow = live.Where(r => r.ReservationTime <= now)
+                .GroupBy(r => r.ParkingSpaceId)
+                .ToDictionary(g => g.Key, g => g.Count());
+            var held = live
                 .GroupBy(r => r.ParkingSpaceId)
                 .ToDictionary(g => g.Key, g => g.Count());
 
-            return spaces.Select(s => ParkingSpaceDTO.From(s, activeNow.GetValueOrDefault(s.Id))).ToList();
+            return spaces.Select(s => ParkingSpaceDTO.From(s,
+                activeNow.GetValueOrDefault(s.Id),
+                held.GetValueOrDefault(s.Id))).ToList();
         }
 
         /// <summary>
@@ -258,32 +264,6 @@ namespace API.Services
                 .Select(t => overlapping.Count(r => r.ReservationTime <= t && t < r.ReservationTime.AddMinutes(r.Duration)))
                 .DefaultIfEmpty(0)
                 .Max();
-        }
-
-        /// <summary>
-        /// Removes expired reservations and recomputes CurrentVehicles from the reservations that are still
-        /// active. Because the counter is derived (not incremented/decremented by timers), it is idempotent
-        /// and needs no background work.
-        /// </summary>
-        private async Task SyncReservationsAsync()
-        {
-            var now = DateTime.UtcNow;
-            var reservations = await _context.Reservations.ToListAsync();
-
-            var expired = reservations.Where(r => r.ReservationTime.AddMinutes(r.Duration) <= now).ToList();
-            _context.Reservations.RemoveRange(expired);
-
-            var activeBySpace = reservations.Except(expired)
-                .GroupBy(r => r.ParkingSpaceId)
-                .ToDictionary(g => g.Key, g => g.Count());
-
-            var spaces = await _context.ParkingSpaces.ToListAsync();
-            foreach (var space in spaces)
-            {
-                space.CurrentVehicles = activeBySpace.GetValueOrDefault(space.Id);
-            }
-
-            await _context.SaveChangesAsync();
         }
     }
 }

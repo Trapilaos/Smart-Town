@@ -5,6 +5,8 @@ using API.Entities;
 using API.Services;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace API.Tests;
 
@@ -46,11 +48,12 @@ public class ParkingServiceTests : IDisposable
 {
     private readonly SqliteConnection _connection = new("Data Source=:memory:");
     private readonly DataContext _context;
+    private readonly SaveCounter _saves = new();
 
     public ParkingServiceTests()
     {
         _connection.Open();
-        _context = new DataContext(new DbContextOptionsBuilder<DataContext>().UseSqlite(_connection).Options);
+        _context = new DataContext(new DbContextOptionsBuilder<DataContext>().UseSqlite(_connection).AddInterceptors(_saves).Options);
         _context.Database.EnsureCreated();
     }
 
@@ -63,24 +66,98 @@ public class ParkingServiceTests : IDisposable
     [Fact]
     public async Task Expired_reservation_frees_exactly_one_slot()
     {
-        // Occupancy is derived from active reservations, so a seeded CurrentVehicles value is overwritten.
-        _context.ParkingSpaces.Add(new ParkingSpace { Id = 1, Name = "Test", MaxVehicles = 10, CurrentVehicles = 0 });
+        // Occupancy is derived from live reservations when a space is listed, so nothing is stored per space.
+        _context.ParkingSpaces.Add(new ParkingSpace { Id = 1, Name = "Test", MaxVehicles = 10 });
         await _context.SaveChangesAsync();
-        var service = new ParkingService(_context, new MunicipalityService(_context), NullLogger<ParkingService>.Instance);
+        var service = NewService();
 
         var (success, _, _) = await service.ReserveParkingSpaceAsync("42", 1, DateTime.UtcNow.AddMinutes(1), 30);
         Assert.True(success);
-        Assert.Equal(1, (await _context.ParkingSpaces.FindAsync(1)).CurrentVehicles);
+        Assert.Equal(1, (await service.GetParkingSpacesAsync()).Single().CurrentVehicles);
 
-        // Make the reservation long expired, then trigger the clean-up that runs on listing.
+        // Make the reservation long expired. Listing ignores it, and the cleanup service removes the row later.
         var reservation = await _context.Reservations.SingleAsync();
         reservation.ReservationTime = DateTime.UtcNow.AddDays(-2);
         await _context.SaveChangesAsync();
 
-        var spaces = await service.GetParkingSpacesAsync();
+        var space = (await service.GetParkingSpacesAsync()).Single();
 
-        Assert.Equal(0, spaces.Single().CurrentVehicles);
-        Assert.Empty(_context.Reservations);
+        Assert.Equal(0, space.CurrentVehicles);
+        Assert.Equal(10, space.FreeNow);
+    }
+
+    [Fact]
+    public async Task Listing_spaces_performs_no_writes()
+    {
+        _context.ParkingSpaces.Add(new ParkingSpace { Id = 1, Name = "Test", MaxVehicles = 2 });
+        _context.Reservations.Add(new Reservation { UserId = "7", ParkingSpaceId = 1, ReservationTime = DateTime.UtcNow.AddDays(-2), Duration = 30 }); // ended
+        _context.Reservations.Add(new Reservation { UserId = "8", ParkingSpaceId = 1, ReservationTime = DateTime.UtcNow.AddMinutes(-5), Duration = 60 }); // parked now
+        await _context.SaveChangesAsync();
+        _saves.Reset();
+
+        var service = NewService();
+        var publicList = await service.GetParkingSpacesAsync();
+        var adminList = await service.GetAllForAdminAsync();
+
+        Assert.Equal(0, _saves.Saves);
+        Assert.Equal(2, await _context.Reservations.CountAsync()); // the ended row is left for the cleanup service
+
+        var space = publicList.Single();
+        Assert.Equal(1, space.CurrentVehicles);
+        Assert.Equal(1, space.FreeNow);
+        Assert.Equal(1, adminList.Single().FreeNow);
+    }
+
+    [Fact]
+    public async Task Cleanup_removes_only_reservations_that_have_ended()
+    {
+        _context.ParkingSpaces.Add(new ParkingSpace { Id = 1, Name = "Test", MaxVehicles = 2 });
+        _context.Reservations.Add(new Reservation { UserId = "7", ParkingSpaceId = 1, ReservationTime = DateTime.UtcNow.AddDays(-2), Duration = 30 });
+        _context.Reservations.Add(new Reservation { UserId = "8", ParkingSpaceId = 1, ReservationTime = DateTime.UtcNow.AddHours(1), Duration = 30 });
+        await _context.SaveChangesAsync();
+
+        var removed = await new ReservationCleanupService(new SingleScopeFactory(_context),
+            NullLogger<ReservationCleanupService>.Instance).PurgeExpiredAsync();
+
+        Assert.Equal(1, removed);
+        Assert.Equal("8", (await _context.Reservations.SingleAsync()).UserId);
+    }
+
+    /// <summary>Counts SaveChanges calls, so a test can prove a read path writes nothing.</summary>
+    private sealed class SaveCounter : SaveChangesInterceptor
+    {
+        public int Saves { get; private set; }
+
+        public void Reset() => Saves = 0;
+
+        public override InterceptionResult<int> SavingChanges(DbContextEventData eventData, InterceptionResult<int> result)
+        {
+            Saves++;
+            return result;
+        }
+
+        public override ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
+        {
+            Saves++;
+            return ValueTask.FromResult(result);
+        }
+    }
+
+    /// <summary>Hands the cleanup service the test's own context, so the test sees the same rows.</summary>
+    private sealed class SingleScopeFactory(DataContext context) : IServiceScopeFactory
+    {
+        public IServiceScope CreateScope() => new FixedScope(context);
+
+        private sealed class FixedScope(DataContext context) : IServiceScope, IServiceProvider
+        {
+            public IServiceProvider ServiceProvider => this;
+
+            public object GetService(Type serviceType) => serviceType == typeof(DataContext) ? context : null;
+
+            public void Dispose()
+            {
+            }
+        }
     }
 
     private ParkingService NewService() => new(_context, new MunicipalityService(_context), NullLogger<ParkingService>.Instance);
