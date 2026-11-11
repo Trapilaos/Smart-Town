@@ -27,22 +27,26 @@
               }
               <div class="card-body d-flex flex-column">
                 <p class="small text-muted mb-1">
-                  <i class="fas fa-clock"></i> {{ event.date | date:'EEE d MMM y, HH:mm' }}
+                  <i class="fas fa-clock"></i> {{ event.date | date:'EEE d MMM y, HH:mm':'Europe/Athens' }}
                 </p>
-                <h3 class="h5 card-title">{{ event.title }}</h3>
+                <h3 class="h5 card-title">
+                  <a class="text-decoration-none" [routerLink]="['/events', event.id]">{{ event.title }}</a>
+                </h3>
                 <p class="card-text flex-grow-1">{{ event.description }}</p>
                 <div class="d-flex align-items-center justify-content-between gap-2 mt-2">
                   <span class="small text-muted">
-                    <i class="fas fa-users"></i> {{ event.interestedUsers.length }} interested
+                    <i class="fas fa-users"></i> {{ event.interestedCount }} interested
                   </span>
-                  @if (isInterested(event)) {
-                    <button type="button" class="btn btn-success btn-sm" disabled>
-                      <i class="fas fa-check"></i> Interested
+                  @if (event.isInterested) {
+                    <button type="button" class="btn btn-outline-secondary btn-sm"
+                      [disabled]="interestPendingEventId === event.id"
+                      (click)="toggleInterest(event)">
+                      <i class="fas fa-times"></i> Withdraw
                     </button>
                   } @else {
                     <button type="button" class="btn btn-outline-primary btn-sm"
                       [disabled]="interestPendingEventId === event.id"
-                      (click)="declareInterest(event)">
+                      (click)="toggleInterest(event)">
                       <i class="fas fa-heart"></i> I'm interested
                     </button>
                   }
