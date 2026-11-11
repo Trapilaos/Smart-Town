@@ -5,6 +5,7 @@ import { Observable } from 'rxjs';
 
 /** A row from GET admin/users-with-roles. */
 export interface ManagedUser {
+  id: number;
   username: string;
   roles: string[];
 }

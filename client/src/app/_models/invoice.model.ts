@@ -52,12 +52,13 @@ export interface CreatedInvoice extends AdminInvoice {
   paymentCode: string;
 }
 
-/** Body for POST /api/admin/invoices. `dueDate` is a UTC ISO string. */
+/** Body for POST /api/admin/invoices. `dueDate` is a UTC ISO string. `userId` is the citizen account, if any. */
 export interface InvoiceRequest {
   payerName: string;
   description: string;
   amount: number;
   dueDate: string;
+  userId?: number | null;
 }
 
 /** Response of GET /api/admin/invoices/summary. */

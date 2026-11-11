@@ -18,6 +18,18 @@
               </div>
 
               <div class="mb-3">
+                <label for="invoice-account" class="form-label">Citizen account <span class="text-muted">(optional)</span></label>
+                <select id="invoice-account" name="account" class="form-select" [(ngModel)]="form.accountId"
+                  (ngModelChange)="onAccountChange($event)">
+                  <option [ngValue]="null">No account (the payer pays with the invoice number and code)</option>
+                  @for (user of accounts; track user.id) {
+                    <option [ngValue]="user.id">{{ user.username }}</option>
+                  }
+                </select>
+                <div class="form-text">Link the invoice to a citizen account so it also appears in that person's "My invoices".</div>
+              </div>
+
+              <div class="mb-3">
                 <label for="invoice-description" class="form-label">Description</label>
                 <input id="invoice-description" name="description" type="text" class="form-control" maxlength="200" required
                   [(ngModel)]="form.description">

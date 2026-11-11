@@ -2,6 +2,7 @@ import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { getErrorMessages } from '../../_helpers/api-error';
 import { CreatedInvoice, InvoiceRequest } from '../../_models/invoice.model';
 import { Municipality } from '../../_models/municipality.model';
+import { AdminService, ManagedUser } from '../../_services/admin.service';
 import { InvoiceService } from '../../_services/invoice.service';
 import { MunicipalityService } from '../../_services/municipality.service';
 
@@ -10,6 +11,8 @@ interface InvoiceForm {
   description: string;
   amount: number | null;
   dueDate: string;
+  /** The citizen account the invoice belongs to, or null for a payer without an account. */
+  accountId: number | null;
 }
 
 /**
@@ -32,7 +35,14 @@ export class AdminInvoiceFormComponent implements OnInit {
   created: CreatedInvoice | null = null;
   municipality: Municipality | null = null;
 
-  constructor(private invoiceService: InvoiceService, private municipalityService: MunicipalityService) {}
+  /** Citizen accounts an invoice can be linked to. Empty when the list cannot be loaded; the form still works. */
+  accounts: ManagedUser[] = [];
+
+  constructor(
+    private invoiceService: InvoiceService,
+    private municipalityService: MunicipalityService,
+    private adminService: AdminService
+  ) {}
 
   ngOnInit(): void {
     this.municipalityService.get().subscribe({
@@ -41,6 +51,20 @@ export class AdminInvoiceFormComponent implements OnInit {
         // The bill still prints without the municipality name.
       }
     });
+    this.adminService.getUsersWithRoles().subscribe({
+      next: users => this.accounts = users,
+      error: () => {
+        // Without the list the account select offers only "no account".
+      }
+    });
+  }
+
+  /** Pre-fills the payer name from the chosen account, but never overwrites a name the admin typed. */
+  onAccountChange(accountId: number | null): void {
+    const account = accountId === null ? undefined : this.accounts.find(user => user.id === accountId);
+    if (account && !this.form.payerName.trim()) {
+      this.form.payerName = account.username;
+    }
   }
 
   submit(): void {
@@ -53,7 +77,8 @@ export class AdminInvoiceFormComponent implements OnInit {
       payerName: this.form.payerName.trim(),
       description: this.form.description.trim(),
       amount: roundToCents(this.form.amount ?? 0),
-      dueDate: endOfLocalDay(this.form.dueDate)
+      dueDate: endOfLocalDay(this.form.dueDate),
+      userId: this.form.accountId
     };
 
     this.saving = true;
@@ -106,7 +131,7 @@ export class AdminInvoiceFormComponent implements OnInit {
 }
 
 function emptyForm(): InvoiceForm {
-  return { payerName: '', description: '', amount: null, dueDate: '' };
+  return { payerName: '', description: '', amount: null, dueDate: '', accountId: null };
 }
 
 function roundToCents(value: number): number {
