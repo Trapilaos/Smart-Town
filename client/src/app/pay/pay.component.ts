@@ -134,7 +134,7 @@ export class PayComponent implements OnInit, OnDestroy {
       return 'Enter the invoice number as printed on your bill, for example INV-2026-000123.';
     }
     if (!PAYMENT_CODE_PATTERN.test(paymentCode)) {
-      return 'Enter the 8-character payment code printed on your bill.';
+      return 'Enter the 8-character payment code from your bill (letters and numbers; the code never uses I, O, 0 or 1).';
     }
     return '';
   }

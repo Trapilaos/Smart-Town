@@ -21,7 +21,7 @@
               <div class="mb-3">
                 <label for="payment-code" class="form-label">Payment code</label>
                 <input id="payment-code" name="paymentCode" type="text" class="form-control text-uppercase" autocomplete="off"
-                  placeholder="8 characters" maxlength="11" required [(ngModel)]="paymentCode"
+                  placeholder="8 characters" maxlength="11" required [ngModel]="paymentCode" (ngModelChange)="paymentCode = $event.toUpperCase()"
                   aria-describedby="payment-code-hint">
                 <div id="payment-code-hint" class="form-text">
                   <i class="fas fa-circle-info" aria-hidden="true"></i>
