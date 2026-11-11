@@ -50,18 +50,19 @@ public class Program
 
         using var scope = app.Services.CreateScope();
         var services = scope.ServiceProvider;
+        var logger = services.GetRequiredService<ILogger<Program>>();
         try
         {
             var context = services.GetRequiredService<DataContext>();
             var userManager = services.GetRequiredService<UserManager<AppUser>>();
             var roleManager = services.GetRequiredService<RoleManager<AppRole>>();
             await context.Database.MigrateAsync();
-            await Seed.SeedData(userManager, roleManager, context, app.Environment.ContentRootPath);
+            var seedOptions = SeedOptions.FromConfiguration(app.Configuration, app.Environment);
+            await Seed.SeedData(userManager, roleManager, context, seedOptions, app.Environment.ContentRootPath, logger);
         }
         catch (Exception ex)
         {
-            var logger = services.GetRequiredService<ILogger<Program>>();
-            logger.LogError(ex, "An error occurred during migration");
+            logger.LogError(ex, "An error occurred during migration or seeding");
         }
 
         app.Run();

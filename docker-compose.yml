@@ -7,6 +7,8 @@ services:
       # Required, at least 64 characters. Copy .env.example to .env and set a real value.
       TokenKey: ${TOKEN_KEY:?Set TOKEN_KEY in .env (copy .env.example)}
       ConnectionStrings__DefaultConnection: Data Source=/data/smarttown.db
+      # Initial admin password, used only when no admin exists yet. Set ADMIN_PASSWORD in .env (copy .env.example).
+      Seed__AdminPassword: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
     volumes:
       - api-data:/data
     restart: unless-stopped

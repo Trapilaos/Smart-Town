@@ -15,12 +15,12 @@ namespace API.Data
         };
 
         /// <summary>
-        /// Seeds 24 invoices (three for each of the eight seeded residents) when the table is empty, then backfills
+        /// Seeds 24 demo invoices (three for each demo resident) when demo data is enabled and the table is empty, then backfills
         /// any invoice that predates the description, due date, payment code and receipt columns.
         /// </summary>
-        public static async Task SeedInvoices(DataContext context)
+        public static async Task SeedInvoices(DataContext context, bool demoData)
         {
-            if (!await context.Invoices.AnyAsync())
+            if (demoData && !await context.Invoices.AnyAsync())
             {
                 await context.Invoices.AddRangeAsync(Generate(DateTime.UtcNow));
                 await context.SaveChangesAsync();

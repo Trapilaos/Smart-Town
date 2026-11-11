@@ -47,6 +47,19 @@ public class ApiFactory : WebApplicationFactory<Program>
         ["RateLimits:GlobalPerMinute"] = "100000",
     };
 
+    /// <summary>The environment the host runs in. Subclasses use Production to test non-development behaviour.</summary>
+    protected virtual string EnvironmentName => "Testing";
+
+    /// <summary>
+    /// Seed settings. The "Testing" host gets the demo residents and the admin through configuration, which
+    /// mirrors what Development seeds by default, so the existing tests keep their known accounts.
+    /// </summary>
+    protected virtual IReadOnlyDictionary<string, string> SeedSettings => new Dictionary<string, string>
+    {
+        ["Seed:DemoData"] = "true",
+        ["Seed:AdminPassword"] = AdminPassword,
+    };
+
     private void SetEnv(string name, string value)
     {
         _previousEnv[name] = Environment.GetEnvironmentVariable(name);
@@ -55,9 +68,9 @@ public class ApiFactory : WebApplicationFactory<Program>
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.UseEnvironment("Testing");
+        builder.UseEnvironment(EnvironmentName);
         builder.ConfigureLogging(l => l.SetMinimumLevel(LogLevel.Warning));
-        foreach (var (key, value) in RateLimitSettings)
+        foreach (var (key, value) in RateLimitSettings.Concat(SeedSettings))
         {
             builder.UseSetting(key, value);
         }
