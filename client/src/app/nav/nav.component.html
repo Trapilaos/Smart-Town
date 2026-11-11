@@ -2,12 +2,12 @@
   <div class="container">
     <a class="navbar-brand navbar-brand-custom" routerLink="/" routerLinkActive="active" (click)="closeMenu()">Smart-Town</a>
 
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse"
-      aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+    <button class="navbar-toggler" type="button" (click)="toggleMenu()"
+      aria-controls="navbarCollapse" [attr.aria-expanded]="isMenuOpen" aria-label="Toggle navigation">
       <span class="navbar-toggler-icon"></span>
     </button>
 
-    <div class="collapse navbar-collapse" id="navbarCollapse">
+    <div class="collapse navbar-collapse" id="navbarCollapse" [class.show]="isMenuOpen">
       @if (accountService.currentUser$ | async; as user) {
         <ul class="navbar-nav me-auto mb-2 mb-lg-0">
           <li class="nav-item"><a class="nav-link" routerLink="/member" routerLinkActive="active" (click)="closeMenu()">Community</a></li>

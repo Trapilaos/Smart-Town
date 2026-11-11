@@ -1,16 +1,9 @@
 import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { AccountService } from '../_services/account.service';
+import { NavStateService } from '../_services/nav-state.service';
 import { Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import { User } from '../_models/user';
-
-/** Opens or closes the navbar on small screens by pressing Bootstrap's own toggler. */
-function setMenuOpen(open: boolean) {
-  const menu = document.getElementById('navbarCollapse');
-  if (menu && menu.classList.contains('show') !== open) {
-    (document.querySelector('.navbar-toggler') as HTMLElement | null)?.click();
-  }
-}
 
 @Component({
     selector: 'app-nav',
@@ -24,11 +17,16 @@ export class NavComponent implements OnInit {
 
   constructor(
     public accountService: AccountService,
+    public navState: NavStateService,
     private router: Router,
     private toastr: ToastrService
   ) {}
 
   ngOnInit(): void {}
+
+  get isMenuOpen(): boolean {
+    return this.navState.menuOpen();
+  }
 
   isAdmin(user: User): boolean {
     return user.roles.includes('Admin');
@@ -42,16 +40,23 @@ export class NavComponent implements OnInit {
   }
 
   logout() {
+    this.navState.closeMenu();
     this.accountService.logout();
     this.router.navigateByUrl('/');
   }
 
+  /** Opens or closes the mobile menu (the hamburger button). */
+  toggleMenu() {
+    this.navState.toggleMenu();
+  }
+
   /** Collapses the mobile menu after a link is chosen. */
   closeMenu() {
-    setMenuOpen(false);
+    this.navState.closeMenu();
   }
 
   redirectUser(user: User) {
+    this.navState.closeMenu();
     if (this.isAdmin(user)) {
       this.router.navigateByUrl('/admin');
     } else {

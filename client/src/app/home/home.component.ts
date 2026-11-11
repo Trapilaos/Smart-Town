@@ -1,12 +1,6 @@
 import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { AccountService } from 'src/app/_services/account.service';
-/** Opens or closes the navbar on small screens by pressing Bootstrap's own toggler. */
-function setMenuOpen(open: boolean) {
-  const menu = document.getElementById('navbarCollapse');
-  if (menu && menu.classList.contains('show') !== open) {
-    (document.querySelector('.navbar-toggler') as HTMLElement | null)?.click();
-  }
-}
+import { NavStateService } from 'src/app/_services/nav-state.service';
 
 @Component({
     selector: 'app-home',
@@ -18,7 +12,7 @@ function setMenuOpen(open: boolean) {
 export class HomeComponent implements OnInit {
   registerMode = false;
 
-  constructor(public accountService: AccountService) { }
+  constructor(public accountService: AccountService, private navState: NavStateService) { }
 
   ngOnInit(): void { }
 
@@ -36,7 +30,8 @@ export class HomeComponent implements OnInit {
 
   /** Opens the navbar login form (on mobile it sits in the collapsed menu) and focuses the username. */
   focusLogin() {
-    setMenuOpen(true);
-    document.getElementById('navUsername')?.focus();
+    this.navState.openMenu();
+    // Wait for the navbar to render its open state before focusing a field that may be hidden.
+    setTimeout(() => document.getElementById('navUsername')?.focus());
   }
 }
