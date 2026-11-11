@@ -16,7 +16,7 @@ namespace API.Middleware
             _logger = logger;
             _env = env;
         }
-        
+
         public async Task InvokeAsync(HttpContext context)
         {
             try
@@ -25,19 +25,18 @@ namespace API.Middleware
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, ex.Message);
+                _logger.LogError(ex, "Unhandled exception");
                 context.Response.ContentType = "application/json";
                 context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
 
+                // Exception details are only exposed in Development.
                 var response = _env.IsDevelopment()
-                    ? new ApiException(context.Response.StatusCode, ex.Message, ex.StackTrace?.ToString())
-                    : new ApiException(context.Response.StatusCode, ex.Message, "Internal Server Error");
+                    ? new ApiException(context.Response.StatusCode, ex.Message, ex.StackTrace)
+                    : new ApiException(context.Response.StatusCode, "Internal Server Error", null);
 
                 var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
-                var json = JsonSerializer.Serialize(response, options);
-
-                await context.Response.WriteAsync(json);
+                await context.Response.WriteAsync(JsonSerializer.Serialize(response, options));
             }
         }
     }

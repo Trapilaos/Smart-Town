@@ -9,12 +9,17 @@ namespace API.Extensions
 {
     public static class IdentityServiceExtensions
     {
-        public static IServiceCollection AddIdentityServices(this IServiceCollection services, 
+        public static IServiceCollection AddIdentityServices(this IServiceCollection services,
             IConfiguration config)
         {
+            var tokenKey = JwtSettings.GetTokenKey(config);
+
             services.AddIdentityCore<AppUser>(opt =>
             {
                 opt.Password.RequireNonAlphanumeric = false;
+                opt.Lockout.AllowedForNewUsers = true;
+                opt.Lockout.MaxFailedAccessAttempts = 5;
+                opt.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(10);
             })
                 .AddRoles<AppRole>()
                 .AddRoleManager<RoleManager<AppRole>>()
@@ -23,16 +28,20 @@ namespace API.Extensions
                 .AddEntityFrameworkStores<DataContext>();
 
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-                .AddJwtBearer(options => 
+                .AddJwtBearer(options =>
                 {
                     options.TokenValidationParameters = new TokenValidationParameters
                     {
                         ValidateIssuerSigningKey = true,
-                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(config["TokenKey"])),
-                        ValidateIssuer = false,
-                        ValidateAudience = false,
+                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(tokenKey)),
+                        ValidateIssuer = true,
+                        ValidIssuer = JwtSettings.GetIssuer(config),
+                        ValidateAudience = true,
+                        ValidAudience = JwtSettings.GetAudience(config),
+                        ValidateLifetime = true,
+                        ClockSkew = TimeSpan.FromMinutes(1),
                     };
-                    
+
                     options.Events = new JwtBearerEvents
                     {
                         OnMessageReceived = context =>
@@ -40,7 +49,7 @@ namespace API.Extensions
                             var accessToken = context.Request.Query["access_token"];
 
                             var path = context.HttpContext.Request.Path;
-                            if (!string.IsNullOrEmpty(accessToken) && 
+                            if (!string.IsNullOrEmpty(accessToken) &&
                                 path.StartsWithSegments("/hubs"))
                             {
                                 context.Token = accessToken;
@@ -51,12 +60,13 @@ namespace API.Extensions
                     };
                 });
 
-            services.AddAuthorization(opt => 
+            services.AddAuthorization(opt =>
             {
                 opt.AddPolicy("RequireAdminRole", policy => policy.RequireRole("Admin"));
+                opt.AddPolicy("RequireMemberRole", policy => policy.RequireRole("Member"));
                 opt.AddPolicy("ModeratePhotoRole", policy => policy.RequireRole("Admin", "Moderator"));
             });
-            
+
             return services;
         }
     }

@@ -8,12 +8,12 @@ namespace API.Data
 {
     public static class UserSeed
     {
-        public static async Task SeedUsers(UserManager<AppUser> userManager, RoleManager<AppRole> roleManager)
+        public static async Task SeedUsers(UserManager<AppUser> userManager, RoleManager<AppRole> roleManager, string contentRootPath)
         {
             if (await userManager.Users.AnyAsync()) return;
 
-            var userData = await File.ReadAllTextAsync("Data/UserSeedData.json");
-            var users = JsonSerializer.Deserialize<List<AppUser>>(userData);
+            var userData = await File.ReadAllTextAsync(Path.Combine(contentRootPath, "Data", "UserSeedData.json"));
+            var users = JsonSerializer.Deserialize<List<AppUser>>(userData, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             if (users == null) return;
 
             var roles = new List<AppRole>

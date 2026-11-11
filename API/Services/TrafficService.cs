@@ -20,7 +20,7 @@ namespace API.Services
         /// <returns>A list of traffic data for the current hour.</returns>
         public async Task<List<TrafficData>> GetCurrentTrafficDataAsync()
         {
-            var now = DateTime.Now;
+            var now = DateTime.UtcNow;
             return await _context.TrafficData
                 .Where(td => td.Timestamp.Hour == now.Hour && td.Timestamp.Date == now.Date)
                 .ToListAsync();
@@ -58,12 +58,12 @@ namespace API.Services
         }
 
         /// <summary>
-        /// Clears old traffic data that is older than one day.
+        /// Clears all existing traffic data before a fresh set is generated.
         /// </summary>
         private async Task ClearOldTrafficDataAsync()
         {
             var oldData = _context.TrafficData
-                .Where(td => td.Timestamp < DateTime.Now.AddDays(-1)); // Keep only the last day's data
+                .ToList(); // the generator produces a fresh full 24h set, so replace everything
 
             _context.TrafficData.RemoveRange(oldData);
             await _context.SaveChangesAsync();

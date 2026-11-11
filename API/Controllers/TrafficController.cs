@@ -1,5 +1,6 @@
 using API.Entities;
 using API.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers
@@ -44,6 +45,7 @@ namespace API.Controllers
         /// Updates the traffic data.
         /// </summary>
         /// <returns>A 204 No Content response if the update was successful.</returns>
+        [Authorize(Policy = "RequireAdminRole")]
         [HttpPost("update")]
         public async Task<ActionResult> UpdateTrafficData()
         {

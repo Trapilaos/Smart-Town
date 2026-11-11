@@ -1,8 +1,8 @@
 using API.Data;
 using API.Interfaces;
+using API.Helpers;
 using API.Services;
 using Microsoft.EntityFrameworkCore;
-
 
 namespace API.Extensions
 {
@@ -10,15 +10,22 @@ namespace API.Extensions
     {
         public static IServiceCollection AddApplicationServices(this IServiceCollection services, IConfiguration config)
         {
-            services.AddDbContext<DataContext>(opt => 
+            services.AddDbContext<DataContext>(opt =>
             {
                 opt.UseSqlite(config.GetConnectionString("DefaultConnection"));
             });
             services.AddCors();
             services.AddScoped<ITokenService, TokenService>();
             services.AddScoped<IUserRepository, UserRepository>();
+            services.AddScoped<ITrafficService, TrafficService>();
+            services.AddScoped<IParkingService, ParkingService>();
+            services.AddScoped<IPaymentService, PaymentService>();
             services.AddScoped<IWasteManagementService, WasteManagementService>();
-            services.AddAutoMapper(typeof(MappingProfiles).Assembly);
+            services.AddScoped<IEventService, EventService>();
+            services.AddScoped<ICommentService, CommentService>();
+            services.AddHttpClient<SmartLightingService>();
+            services.AddHostedService<TrafficDataBackgroundService>();
+            services.AddAutoMapper(typeof(AutoMapperProfiles).Assembly);
 
             return services;
         }

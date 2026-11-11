@@ -1,39 +1,30 @@
 using API.DTOs;
 using API.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using API.Errors;
 
 namespace API.Controllers
 {
-    [ApiController]
-    [Route("api/[controller]")]
+    [Authorize]
     public class PaymentController : BaseApiController
     {
-        // PaymentService for managing payments and invoices
         private readonly IPaymentService _paymentService;
-        // Logger for logging events and errors
-        private readonly ILogger<PaymentController> _logger;
 
-        public PaymentController(IPaymentService paymentService, ILogger<PaymentController> logger)
+        public PaymentController(IPaymentService paymentService)
         {
             _paymentService = paymentService;
-            _logger = logger;
         }
 
         /// <summary>
-        /// Processes a payment.
+        /// Pays one of the caller's own invoices. The user id always comes from the token, never from the body.
         /// </summary>
-        /// <param name="paymentDTO">The payment data.</param>
-        /// <returns>The processed invoice.</returns>
         [HttpPost]
         public async Task<IActionResult> ProcessPayment(PaymentDTO paymentDTO)
         {
-            // Get the user ID from the authenticated user's claim
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            paymentDTO.UserId = userId;
+            paymentDTO.UserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-            // Process the payment and return the invoice
             var invoice = await _paymentService.ProcessPayment(paymentDTO);
             if (invoice == null)
                 return BadRequest(new ApiException(400, "Invalid invoice details or invoice already paid", null));
@@ -41,56 +32,24 @@ namespace API.Controllers
             return Ok(invoice);
         }
 
-        /// <summary>
-        /// Checks the status of an invoice.
-        /// </summary>
-        /// <param name="invoiceNumber">The invoice number.</param>
-        /// <returns>The invoice details.</returns>
         [HttpGet("check/{invoiceNumber}")]
         public async Task<IActionResult> CheckInvoice(string invoiceNumber)
         {
-            // Validate the invoice number
             if (string.IsNullOrEmpty(invoiceNumber))
-            {
                 return BadRequest(new ApiException(400, "Invoice number is required", null));
-            }
 
-            // Get the user ID from the authenticated user's claim
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            try
+            var invoice = await _paymentService.CheckInvoice(invoiceNumber, userId);
+            if (invoice == null)
+                return NotFound(new ApiException(404, "Invoice not found", null));
+
+            return Ok(new
             {
-                // Check the invoice and return the invoice details
-                var invoice = await _paymentService.CheckInvoice(invoiceNumber, userId);
-                return Ok(new
-                {
-                    amount = invoice.Amount,
-                    currency = "EUR",
-                    userId = invoice.UserId,
-                    isPaid = invoice.IsPaid
-                });
-            }
-            catch (InvalidOperationException ex)
-            {
-                if (ex.Message == "Invoice not found")
-                {
-                    return NotFound(new ApiException(404, ex.Message, null));
-                }
-                else
-                {
-                    return Ok(new
-                    {
-                        amount = 0,
-                        currency = "EUR",
-                        userId = "",
-                        isPaid = true
-                    });
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Unexpected error occurred");
-                throw; // Let the middleware handle unexpected exceptions
-            }
+                amount = invoice.Amount,
+                currency = "EUR",
+                userId = invoice.UserId,
+                isPaid = invoice.IsPaid
+            });
         }
     }
 }

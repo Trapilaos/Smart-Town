@@ -65,7 +65,7 @@ namespace API.Services
                 return (false, new List<string> { "No need for optimal path, all bins are empty" });
             }
 
-            var currentTime = DateTime.Now;
+            var currentTime = DateTime.UtcNow;
             var trafficData = await _context.TrafficData
                 .Where(td => td.Timestamp >= currentTime.Date && td.Timestamp < currentTime.Date.AddDays(1))
                 .ToListAsync();
