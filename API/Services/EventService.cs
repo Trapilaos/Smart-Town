@@ -3,6 +3,7 @@ using API.DTOs;
 using API.Entities;
 using API.Extensions;
 using API.Interfaces;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
 namespace API.Services
@@ -49,16 +50,39 @@ namespace API.Services
             var existing = await _context.EventInterests.FirstOrDefaultAsync(i => i.EventId == eventId && i.UserId == userId);
             if (interested && existing == null)
             {
-                _context.EventInterests.Add(new EventInterest { EventId = eventId, UserId = userId, CreatedAt = DateTime.UtcNow });
+                await AddInterestAsync(eventId, userId);
             }
             else if (!interested && existing != null)
             {
                 _context.EventInterests.Remove(existing);
+                await _context.SaveChangesAsync();
             }
 
-            await _context.SaveChangesAsync();
             return await GetPublishedByIdAsync(eventId, userId);
         }
+
+        /// <summary>
+        /// Two quick clicks can both pass the existence check. The second insert then hits the (EventId, UserId)
+        /// primary key. That means the interest is already recorded, so it is not an error.
+        /// </summary>
+        private async Task AddInterestAsync(int eventId, string userId)
+        {
+            var interest = new EventInterest { EventId = eventId, UserId = userId, CreatedAt = DateTime.UtcNow };
+            _context.EventInterests.Add(interest);
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex) when (IsDuplicateInterest(ex))
+            {
+                _context.Entry(interest).State = EntityState.Detached;
+            }
+        }
+
+        /// <summary>SQLite's primary-key violation (extended code 1555), which is how a duplicate interest shows up.</summary>
+        private static bool IsDuplicateInterest(DbUpdateException ex) =>
+            ex.InnerException is SqliteException { SqliteExtendedErrorCode: 1555 };
 
         public async Task<List<AdminEventDTO>> GetAllForAdminAsync()
         {
