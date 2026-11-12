@@ -10,7 +10,7 @@ This file records how Smart-Town was modernised with Claude Code. Each phase wen
 | 3b. UI overhaul | Opus plans → Haiku builds → Sonnet tests | Fix the UI after a hands-on browser review | Done (3 rounds) |
 | 3c. Municipality platform | Opus plans → Haiku builds → Sonnet tests | Maps, bins, computed lighting, public parking, events and invoices, security | Done (2 fix rounds) |
 | 4. Review | Claude Opus | Review the merged result end to end | Done: 10 findings, all fixed and retested |
-| 5. Documentation | Claude Sonnet | New README, screenshots, architecture diagram | Not started |
+| 5. Documentation | Claude Sonnet (Opus review) | New README, screenshots, architecture diagrams | Done |
 
 Ground rules: make small, focused commits on the `ai-workflow` branch; a human approves the plan before Phase 3; nothing is pushed without explicit approval.
 
@@ -150,3 +150,9 @@ Opus reviewed the whole branch against `main` (102 commits, 294 files) and found
 | R9 / R10 | Startup continued after a failed migration; the invoice summary loaded every row into memory | Fail fast; aggregate in SQL |
 
 The fixes were planned by Opus, built by two Haiku agents in parallel (backend and client), and tested by Sonnet.
+
+## Phase 5: Documentation (Sonnet, reviewed by Opus)
+
+Sonnet wrote the new README: features, 13 screenshots taken with headless Chrome (puppeteer-core) from the running app, two Mermaid diagrams (system and domain), key design decisions, a configuration table taken from the code, the security summary, test counts measured from real runs (241 API, 113 client) and this workflow.
+
+Opus's review found that the documented `npm start` could not work: `ng serve` forced TLS with a private key that the security cleanup had removed. Instead of documenting a workaround, Opus changed the dev setup to match production. The development environment now uses the same relative `api/` URL, and `ng serve` proxies `/api` to the API over plain HTTP, the way nginx does in Docker. A fresh clone now runs with `dotnet run` plus `npm start`, with no certificates or CORS setup.
