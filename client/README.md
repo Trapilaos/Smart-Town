@@ -1,27 +1,17 @@
-# Client
+# Smart-Town client
 
-This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 16.2.14.
+Angular 22 single-page app (NgModule style) with Bootstrap and Leaflet maps. See the [root README](../README.md) for the overview, architecture and setup.
 
-## Development server
+## Scripts
 
-Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The application will automatically reload if you change any of the source files.
+Run from this folder (Node 24, `npm ci` first):
 
-## Code scaffolding
+| Command | What it does |
+|---|---|
+| `npm start` | `ng serve` on port 4200, proxying `/api` to `https://localhost:5001` (see `proxy.conf.json`). Needs the API running. |
+| `npm run build` | `ng build` (production configuration by default) into `dist/client`. |
+| `npm run watch` | Development build in watch mode. |
+| `npm test` | Karma and Jasmine tests with Chrome. |
+| `npx ng test --watch=false --browsers=ChromeHeadlessCI` | The headless run that CI uses. |
 
-Run `ng generate component component-name` to generate a new component. You can also use `ng generate directive|pipe|service|class|guard|interface|enum|module`.
-
-## Build
-
-Run `ng build` to build the project. The build artifacts will be stored in the `dist/` directory.
-
-## Running unit tests
-
-Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).
-
-## Running end-to-end tests
-
-Run `ng e2e` to execute the end-to-end tests via a platform of your choice. To use this command, you need to first add a package that implements end-to-end testing capabilities.
-
-## Further help
-
-To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI Overview and Command Reference](https://angular.io/cli) page.
+`npm start` is configured for TLS and expects `ssl/localhost-key.pem`, which is not in the repository. Generate a pair, or run `npm start -- --ssl false`.
