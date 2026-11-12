@@ -210,7 +210,7 @@ Prerequisites: the .NET 10 SDK and Node 24 (the lockfile is written by npm 11).
    dotnet user-secrets set "TokenKey" "<a random string of 64 or more characters>"
    ```
 
-2. Run the API. The `api` launch profile uses the Development environment and listens on `http://localhost:5000` and `https://localhost:5001` (run `dotnet dev-certs https --trust` once if you have never trusted the dev certificate):
+2. Run the API. The `api` launch profile uses the Development environment and listens on `http://localhost:5000` (and `https://localhost:5001`):
 
    ```bash
    dotnet run
@@ -226,7 +226,7 @@ Prerequisites: the .NET 10 SDK and Node 24 (the lockfile is written by npm 11).
    npm start
    ```
 
-   `ng serve` proxies `/api` to `https://localhost:5001` (see `client/proxy.conf.json`), so the browser only talks to one origin. The `serve` options in `angular.json` ask for TLS with `client/ssl/localhost.pem` and a matching `localhost-key.pem` that is not in the repository. Either generate your own pair there (for example with `mkcert`), or serve over plain HTTP with `npm start -- --ssl false` and open `http://localhost:4200`.
+   Open http://localhost:4200. `ng serve` proxies `/api` to the API on `http://localhost:5000` (see `client/proxy.conf.json`), the same way nginx does in Docker, so the browser talks to a single origin and no certificates or CORS setup are needed.
 
 ### Docker
 
@@ -253,7 +253,7 @@ Keys use `:` in `appsettings.json` and `__` in environment variables (`RateLimit
 | `ConnectionStrings:DefaultConnection` | `Data Source=Smarttown.db` | SQLite file. Compose sets `/data/smarttown.db`. |
 | `Jwt:Issuer`, `Jwt:Audience` | `SmartTown.Api`, `SmartTown.Client` | Token issuer and audience. |
 | `Jwt:ExpiryDays` | `7` | Token lifetime. |
-| `Cors:AllowedOrigins` | `["https://localhost:4200"]` | Allowed browser origins. Not needed when the client is served through the proxy. |
+| `Cors:AllowedOrigins` | `["https://localhost:4200"]` | Allowed browser origins, for clients on another origin. Not needed with `ng serve` or Docker, which both use a same-origin proxy. |
 | `Seed:DemoData` | `true` in Development, otherwise `false` | Seed demo residents and invoices. |
 | `Seed:AdminUsername` | `admin` | Username of the seeded admin. |
 | `Seed:AdminPassword` | none | Password for the first admin outside Development. Without it no admin is created and a warning is logged. |
